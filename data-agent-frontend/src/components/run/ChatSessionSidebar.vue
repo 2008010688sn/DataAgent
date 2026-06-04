@@ -16,14 +16,14 @@
 
 <template>
   <el-aside
-    :width="collapsed ? '48px' : '320px'"
+    :width="collapsed ? '56px' : '320px'"
     class="chat-session-sidebar"
     :class="{ collapsed }"
   >
     <!-- 收起时只显示展开按钮 -->
     <div v-if="collapsed" class="sidebar-collapsed">
       <el-tooltip content="展开会话列表" placement="right">
-        <el-button type="primary" circle class="expand-btn" @click="collapsed = false">
+        <el-button circle class="expand-btn" @click="collapsed = false">
           <el-icon><DArrowRight /></el-icon>
         </el-button>
       </el-tooltip>
@@ -39,28 +39,34 @@
             <el-icon><ArrowLeft /></el-icon>
           </el-button> -->
           <!-- 头像居中 -->
-          <el-avatar :src="agent.avatar" size="large" style="margin: 0 auto">
-            {{ agent.name }}
-          </el-avatar>
+          <div class="agent-profile">
+            <el-avatar :src="agent.avatar" size="large" class="agent-avatar">
+              {{ agent.name }}
+            </el-avatar>
+            <div class="agent-meta">
+              <div class="agent-name">{{ agent.name || 'Agent' }}</div>
+              <div class="agent-subtitle">Chat sessions</div>
+            </div>
+          </div>
 
           <div class="header-right">
             <el-tooltip content="收起会话列表" placement="bottom">
-              <el-button type="default" circle size="large" @click="collapsed = true">
+              <el-button circle size="large" class="collapse-btn" @click="collapsed = true">
                 <el-icon><DArrowLeft /></el-icon>
               </el-button>
             </el-tooltip>
           </div>
         </div>
         <!-- 在一行并且左80%右20%排列 gap8px -->
-        <div class="new-session-section d-flex justify-content-between gap-8px">
-          <div style="width: 80%">
-            <el-button type="primary" @click="createNewSession" style="width: 100%">
+        <div class="new-session-section">
+          <div class="new-session-main">
+            <el-button class="new-session-button" @click="createNewSession">
               <el-icon><Plus /></el-icon>
               新建会话
             </el-button>
           </div>
-          <div>
-            <el-button type="danger" @click="clearAllSessions">
+          <div class="clear-session-main">
+            <el-button class="clear-sessions-button" @click="clearAllSessions">
               <el-icon><Delete /></el-icon>
             </el-button>
           </div>
@@ -70,7 +76,8 @@
       <el-divider style="margin: 0" />
 
       <!-- 会话列表 -->
-      <div class="session-list" style="margin-top: 20px">
+      <div class="session-list">
+        <div class="session-list-heading">Sessions</div>
         <div
           v-for="session in sessions"
           :key="session.id"
@@ -441,10 +448,11 @@
 
 <style scoped>
   .chat-session-sidebar {
-    background-color: white;
-    border-right: 1px solid #e8e8e8;
+    background: #eef3ed;
+    border-right: 1px solid #d7e1d3;
     transition: width 0.3s ease;
     overflow: hidden;
+    box-shadow: 8px 0 24px rgba(34, 94, 58, 0.06);
   }
 
   .chat-session-sidebar.collapsed {
@@ -458,10 +466,26 @@
     align-items: center;
     padding: 16px 0;
     gap: 12px;
+    background: #eef3ed;
+    min-height: 100%;
+    border-right: 1px solid #d7e1d3;
   }
 
   .sidebar-collapsed .expand-btn {
     flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    color: #315846;
+    background: #ffffff;
+    border-color: #cdddc8;
+    box-shadow: 0 6px 16px rgba(34, 94, 58, 0.1);
+  }
+
+  .sidebar-collapsed .expand-btn:hover,
+  .sidebar-collapsed .expand-btn:focus {
+    color: #167243;
+    background: #edf8ef;
+    border-color: #9fca9f;
   }
 
   .sidebar-collapsed .back-btn {
@@ -470,14 +494,49 @@
 
   /* 左侧边栏样式 */
   .sidebar-header {
-    padding: 20px;
+    padding: 18px 18px 14px;
+    background: #f8faf6;
+    border-bottom: 1px solid #dbe6d5;
   }
 
   .header-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .agent-profile {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .agent-avatar {
+    flex: 0 0 auto;
+    border: 1px solid rgba(47, 157, 85, 0.18);
+    box-shadow: 0 8px 20px rgba(34, 94, 58, 0.12);
+  }
+
+  .agent-meta {
+    min-width: 0;
+  }
+
+  .agent-name {
+    color: #183627;
+    font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-subtitle {
+    margin-top: 2px;
+    color: #7d9184;
+    font-size: 12px;
   }
 
   .header-right {
@@ -486,35 +545,111 @@
     gap: 8px;
   }
 
+  .header-right :deep(.el-button) {
+    color: #315846;
+    background: #ffffff;
+    border-color: #cdddc8;
+    box-shadow: 0 6px 16px rgba(34, 94, 58, 0.08);
+  }
+
+  .header-right :deep(.el-button:hover),
+  .header-right :deep(.el-button:focus) {
+    color: #167243;
+    background: #edf8ef;
+    border-color: #9fca9f;
+  }
+
+  .new-session-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px;
+    gap: 8px;
+  }
+
+  .new-session-main,
+  .clear-session-main {
+    min-width: 0;
+  }
+
+  .new-session-button,
+  .clear-sessions-button {
+    width: 100%;
+    height: 38px;
+    border-radius: 8px;
+    font-weight: 700;
+    box-shadow: none;
+  }
+
+  .new-session-button {
+    color: #173f2a;
+    background: #ffffff;
+    border: 1px solid #d6e2d0;
+  }
+
+  .new-session-button:hover,
+  .new-session-button:focus {
+    color: #167243;
+    background: #edf8ef;
+    border-color: #9fca9f;
+  }
+
+  .clear-sessions-button {
+    color: #a94b4b;
+    background: #fff3f1;
+    border: 1px solid #efcbc7;
+  }
+
+  .clear-sessions-button:hover,
+  .clear-sessions-button:focus {
+    color: #8d3434;
+    background: #ffe9e5;
+    border-color: #dda6a0;
+  }
+
   /* 会话列表样式 */
   .session-list {
-    max-height: calc(100vh - 200px);
+    max-height: calc(100vh - 201px);
     overflow-y: auto;
-    padding: 0 20px 20px;
+    padding: 14px 13px 20px;
+    background: linear-gradient(180deg, #eef3ed 0%, #f5f7f2 100%);
+  }
+
+  .session-list-heading {
+    padding: 0 7px 10px;
+    color: #6f8375;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
   }
 
   .session-item {
-    padding: 16px;
-    border: 1px solid #e8e8e8;
+    padding: 13px 14px;
+    border: 1px solid #e6ece2;
     border-radius: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    background: white;
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 4px rgba(34, 94, 58, 0.05);
   }
 
   .session-item:hover {
-    border-color: #409eff;
-    background-color: #f8fbff;
+    border-color: #b9d3b4;
+    background: #ffffff;
+    transform: translateY(-1px);
   }
 
   .session-item.active {
-    border-color: #409eff;
-    background-color: #ecf5ff;
+    border-color: #167243;
+    background: #edf8ef;
+    box-shadow: 0 5px 14px rgba(22, 114, 67, 0.1);
   }
 
   .session-item.pinned {
-    border-left: 4px solid #e6a23c;
+    border-left: 4px solid #7b9f42;
   }
 
   .session-header {
@@ -527,7 +662,7 @@
   .session-title {
     font-weight: 600;
     font-size: 14px;
-    color: #303133;
+    color: #183627;
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -541,15 +676,32 @@
     flex-shrink: 0;
   }
 
+  .session-actions :deep(.el-button) {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    color: #79a4b1;
+    border-radius: 6px;
+  }
+
+  .session-actions :deep(.el-button:hover) {
+    color: #167243;
+    background: #edf8ef;
+  }
+
   .session-time {
     font-size: 12px;
-    color: #909399;
+    color: #7d9184;
   }
 
   /* 响应式设计 */
   @media (max-width: 768px) {
-    .el-aside {
-      width: 250px !important;
+    .chat-session-sidebar {
+      width: 280px !important;
+    }
+
+    .chat-session-sidebar.collapsed {
+      width: 56px !important;
     }
   }
 </style>

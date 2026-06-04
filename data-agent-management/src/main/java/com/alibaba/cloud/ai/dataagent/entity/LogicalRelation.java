@@ -76,7 +76,7 @@ public class LogicalRelation {
 	/**
 	 * 逻辑删除标志 0-未删除, 1-已删除
 	 */
-	private Integer isDeleted;
+	private Boolean isDeleted;
 
 	/**
 	 * 创建时间

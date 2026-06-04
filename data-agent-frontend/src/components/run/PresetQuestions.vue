@@ -131,7 +131,7 @@
 
   .questions-loading .el-icon {
     font-size: 16px;
-    color: #409eff;
+    color: #167243;
   }
 
   .questions-empty {
@@ -154,7 +154,7 @@
 
   .header-icon {
     font-size: 16px;
-    color: #409eff;
+    color: #167243;
   }
 
   .header-title {
@@ -185,8 +185,8 @@
   }
 
   .question-item:hover {
-    background: #ecf5ff;
-    border-color: #409eff;
+    background: #edf8ef;
+    border-color: #167243;
     transform: translateY(-1px);
   }
 
@@ -205,7 +205,7 @@
   }
 
   .question-item:hover .question-text {
-    color: #409eff;
+    color: #167243;
   }
 
   .question-arrow {
@@ -216,7 +216,7 @@
   }
 
   .question-item:hover .question-arrow {
-    color: #409eff;
+    color: #167243;
     transform: translateX(2px);
   }
 

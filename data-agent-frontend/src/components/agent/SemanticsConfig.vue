@@ -77,8 +77,8 @@
       <el-table-column label="数据类型" min-width="80px" prop="dataType" />
       <el-table-column label="状态" min-width="80px">
         <template #default="scope">
-          <el-tag :type="scope.row.status === 1 ? 'success' : 'info'" round>
-            {{ scope.row.status === 1 ? '启用' : '停用' }}
+          <el-tag :type="scope.row.status ? 'success' : 'info'" round>
+            {{ scope.row.status ? '启用' : '停用' }}
           </el-tag>
         </template>
       </el-table-column>
@@ -93,12 +93,12 @@
             编辑
           </el-button>
           <el-button
-            v-if="scope.row.status === 0"
+            v-if="!scope.row.status"
             plain
             round
             size="small"
             type="success"
-            @click="toggleStatus(scope.row, 1)"
+            @click="toggleStatus(scope.row, true)"
           >
             启用
           </el-button>
@@ -108,7 +108,7 @@
             round
             size="small"
             type="warning"
-            @click="toggleStatus(scope.row, 0)"
+            @click="toggleStatus(scope.row, false)"
           >
             停用
           </el-button>
@@ -221,7 +221,7 @@
     businessDescription: '',
     columnComment: '',
     dataType: '',
-    status: 1,
+    status: true,
     agentId,
   });
 
@@ -385,7 +385,7 @@
         }
       };
 
-      const toggleStatus = async (model: SemanticModel, status: number) => {
+      const toggleStatus = async (model: SemanticModel, status: boolean) => {
         if (!model.id) {
           return;
         }
@@ -393,19 +393,19 @@
         try {
           const ids = [model.id];
           const result =
-            status === 1
+            status
               ? await semanticModelService.enable(ids)
               : await semanticModelService.disable(ids);
 
           if (!result) {
-            ElMessage.error(`${status === 1 ? '启用' : '停用'}失败`);
+            ElMessage.error(`${status ? '启用' : '停用'}失败`);
             return;
           }
 
-          ElMessage.success(`${status === 1 ? '启用' : '停用'}成功`);
+          ElMessage.success(`${status ? '启用' : '停用'}成功`);
           model.status = status;
         } catch (error) {
-          ElMessage.error(getErrorMessage(error, `${status === 1 ? '启用' : '停用'}失败`));
+          ElMessage.error(getErrorMessage(error, `${status ? '启用' : '停用'}失败`));
           console.error('Failed to toggle status:', error);
         }
       };

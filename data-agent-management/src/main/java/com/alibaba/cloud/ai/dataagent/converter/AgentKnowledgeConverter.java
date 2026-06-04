@@ -36,7 +36,7 @@ public class AgentKnowledgeConverter {
 		vo.setType(po.getType() != null ? po.getType().getCode() : null);
 		vo.setQuestion(po.getQuestion());
 		vo.setContent(po.getContent());
-		vo.setIsRecall(po.getIsRecall() == 1);
+		vo.setIsRecall(Boolean.TRUE.equals(po.getIsRecall()));
 		vo.setEmbeddingStatus(po.getEmbeddingStatus());
 		vo.setSplitterType(po.getSplitterType());
 		vo.setErrorMsg(po.getErrorMsg());
@@ -53,10 +53,10 @@ public class AgentKnowledgeConverter {
 		knowledge.setType(KnowledgeType.valueOf(createKnowledgeDto.getType()));
 		knowledge.setQuestion(createKnowledgeDto.getQuestion());
 		knowledge.setContent(createKnowledgeDto.getContent());
-		knowledge.setIsRecall(1); // 默认为召回状态
-		knowledge.setIsDeleted(0); // 默认为未删除
+		knowledge.setIsRecall(true); // 默认为召回状态
+		knowledge.setIsDeleted(false); // 默认为未删除
 		knowledge.setEmbeddingStatus(EmbeddingStatus.PENDING); // 初始状态为待处理
-		knowledge.setIsResourceCleaned(0); // 默认为物理资源未清理
+		knowledge.setIsResourceCleaned(false); // 默认为物理资源未清理
 
 		// 设置创建和更新时间
 		LocalDateTime now = LocalDateTime.now();

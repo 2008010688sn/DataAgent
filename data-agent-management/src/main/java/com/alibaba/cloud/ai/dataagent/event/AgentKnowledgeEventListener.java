@@ -108,7 +108,7 @@ public class AgentKnowledgeEventListener {
 			// 4. 更新清理状态
 			if (vectorDeleted && fileDeleted) {
 				// 只有都成功了，才标记为资源已清理
-				knowledge.setIsResourceCleaned(1);
+				knowledge.setIsResourceCleaned(true);
 				knowledge.setUpdatedTime(LocalDateTime.now());
 				agentKnowledgeMapper.update(knowledge);
 				log.info("Resources cleaned up successfully. AgentKnowledgeID: {}", id);

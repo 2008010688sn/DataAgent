@@ -39,7 +39,7 @@ public interface AgentDatasourceMapper {
 	List<AgentDatasource> selectByAgentId(@Param("agentId") Long agentId);
 
 	/** Query active datasource ID by agent ID */
-	@Select("SELECT datasource_id FROM agent_datasource WHERE agent_id = #{agentId} AND is_active = 1")
+	@Select("SELECT datasource_id FROM agent_datasource WHERE agent_id = #{agentId} AND is_active = true")
 	Integer selectActiveDatasourceIdByAgentId(@Param("agentId") Long agentId);
 
 	/** Query association by agent ID and data source ID */
@@ -52,32 +52,32 @@ public interface AgentDatasourceMapper {
 	List<AgentDatasource> selectByDatasourceId(@Param("datasourceId") Integer datasourceId);
 
 	/** Disable all data sources for an agent */
-	@Update("UPDATE agent_datasource SET is_active = 0 WHERE agent_id = #{agentId}")
+	@Update("UPDATE agent_datasource SET is_active = false WHERE agent_id = #{agentId}")
 	int disableAllByAgentId(@Param("agentId") Long agentId);
 
 	/**
 	 * Count the number of enabled data sources for an agent (excluding the specified data
 	 * source)
 	 */
-	@Select("SELECT COUNT(*) FROM agent_datasource WHERE agent_id = #{agentId} AND is_active = 1 AND datasource_id != #{excludeDatasourceId}")
+	@Select("SELECT COUNT(*) FROM agent_datasource WHERE agent_id = #{agentId} AND is_active = true AND datasource_id != #{excludeDatasourceId}")
 	int countActiveByAgentIdExcluding(@Param("agentId") Long agentId,
 			@Param("excludeDatasourceId") Integer excludeDatasourceId);
 
-	@Select("SELECT COUNT(*) FROM agent_datasource WHERE agent_id = #{agentId} AND is_active = 1")
+	@Select("SELECT COUNT(*) FROM agent_datasource WHERE agent_id = #{agentId} AND is_active = true")
 	int countActiveByAgentId(@Param("agentId") Long agentId);
 
 	@Delete("DELETE FROM agent_datasource WHERE datasource_id = #{datasourceId}")
 	int deleteAllByDatasourceId(@Param("datasourceId") Integer datasourceId);
 
-	@Insert("INSERT INTO agent_datasource (agent_id, datasource_id, is_active) VALUES (#{agentId}, #{datasourceId}, 1)")
+	@Insert("INSERT INTO agent_datasource (agent_id, datasource_id, is_active) VALUES (#{agentId}, #{datasourceId}, true)")
 	int createNewRelationEnabled(@Param("agentId") Long agentId, @Param("datasourceId") Integer datasourceId);
 
 	@Update("UPDATE agent_datasource SET is_active = #{isActive} WHERE agent_id = #{agentId} AND datasource_id = #{datasourceId}")
 	int updateRelation(@Param("agentId") Long agentId, @Param("datasourceId") Integer datasourceId,
-			@Param("isActive") Integer isActive);
+			@Param("isActive") Boolean isActive);
 
 	default int enableRelation(Long agentId, Integer datasourceId) {
-		return updateRelation(agentId, datasourceId, 1);
+		return updateRelation(agentId, datasourceId, true);
 	}
 
 	@Delete("DELETE FROM agent_datasource WHERE agent_id = #{agentId} AND datasource_id = #{datasourceId}")

@@ -17,45 +17,53 @@
 /* CSS 变量定义 */
 :root {
   /* 主色系 - 淡蓝科技感 */
-  --primary-color: #5f70e1;
-  --primary-hover: #3a7afe;
-  --primary-active: #4c63d2;
-  --primary-light: #e8ebff;
-  --primary-lighter: #f5f6ff;
+  --primary-color: #167243;
+  --primary-hover: #0f8a4b;
+  --primary-active: #0b5f39;
+  --primary-light: #dff1df;
+  --primary-lighter: #f4faf2;
 
   /* 辅助色 - 浅紫活泼点缀 */
-  --accent-color: #917dfe;
-  --accent-hover: #a794ff;
-  --accent-light: #f0eeff;
+  --accent-color: #7b9f42;
+  --accent-hover: #6f9338;
+  --accent-light: #eef6dc;
 
   /* 功能色系 */
-  --success-color: #52c41a;
-  --success-light: #f6ffed;
+  --success-color: #1f8a4c;
+  --success-light: #edf8ef;
   --warning-color: #faad14;
   --warning-light: #fff7e6;
   --error-color: #ff4d4f;
   --error-light: #fff2f0;
-  --info-color: #1890ff;
-  --info-light: #e6f7ff;
+  --info-color: #2f7d60;
+  --info-light: #edf7f2;
 
   /* 中性色系 */
-  --text-primary: #1f1f1f;
-  --text-secondary: #666666;
-  --text-tertiary: #999999;
+  --text-primary: #183627;
+  --text-secondary: #5f7467;
+  --text-tertiary: #8aa093;
   --text-quaternary: #bfbfbf;
   --text-disabled: #d9d9d9;
 
   /* 背景色系 */
   --bg-primary: #ffffff;
-  --bg-secondary: #f5f6fa;
-  --bg-tertiary: #fafbfc;
-  --bg-layout: #f8f9fa;
+  --bg-secondary: #f2f7ef;
+  --bg-tertiary: #faf8f0;
+  --bg-layout: #eef5ea;
 
   /* 边框色系 */
-  --border-primary: #eaeaea;
-  --border-secondary: #f0f0f0;
-  --border-tertiary: #f5f5f5;
-  --border-color: #eaeaea;
+  --border-primary: #d8e7d4;
+  --border-secondary: #e7efe2;
+  --border-tertiary: #f0f5ec;
+  --border-color: #d8e7d4;
+
+  --el-color-primary: #167243;
+  --el-color-primary-light-3: #5ca977;
+  --el-color-primary-light-5: #8fc69f;
+  --el-color-primary-light-7: #bdddc4;
+  --el-color-primary-light-8: #d4ead8;
+  --el-color-primary-light-9: #edf8ef;
+  --el-color-primary-dark-2: #0b5f39;
 
   /* 字体系统 */
   --font-family:
@@ -151,6 +159,33 @@ body {
   line-height: 1.6;
 }
 
+.el-button--primary {
+  --el-button-bg-color: #167243;
+  --el-button-border-color: #167243;
+  --el-button-hover-bg-color: #0f8a4b;
+  --el-button-hover-border-color: #0f8a4b;
+  --el-button-active-bg-color: #0b5f39;
+  --el-button-active-border-color: #0b5f39;
+}
+
+.el-button--success {
+  --el-button-bg-color: #1f8a4c;
+  --el-button-border-color: #1f8a4c;
+  --el-button-hover-bg-color: #2f9a5e;
+  --el-button-hover-border-color: #2f9a5e;
+}
+
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px #167243 inset;
+}
+
+.el-radio-button__original-radio:checked + .el-radio-button__inner {
+  background-color: #167243;
+  border-color: #167243;
+  box-shadow: -1px 0 0 0 #167243;
+}
+
 /* 滚动条样式 */
 ::-webkit-scrollbar {
   width: 6px;
@@ -194,7 +229,7 @@ body {
 }
 
 .btn:focus {
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(22, 114, 67, 0.2);
 }
 
 .btn:disabled {
@@ -217,24 +252,24 @@ body {
 
 /* 主要按钮 */
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #1e40af);
+  background: linear-gradient(135deg, #167243, #0b5f39);
   color: white;
-  border-color: #3b82f6;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  border-color: #167243;
+  box-shadow: 0 2px 4px rgba(22, 114, 67, 0.18);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  border-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, #0f8a4b, #167243);
+  border-color: #0f8a4b;
+  box-shadow: 0 4px 12px rgba(22, 114, 67, 0.24);
   transform: translateY(-1px);
 }
 
 .btn-primary:active:not(:disabled) {
-  background: linear-gradient(135deg, #1e40af, #1d4ed8);
-  border-color: #1e40af;
+  background: linear-gradient(135deg, #0b5f39, #167243);
+  border-color: #0b5f39;
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 2px 4px rgba(22, 114, 67, 0.2);
 }
 
 /* 次要按钮 */
@@ -308,44 +343,44 @@ body {
 /* 轮廓按钮 */
 .btn-outline {
   background: transparent;
-  color: #1890ff;
-  border-color: #1890ff;
+  color: #167243;
+  border-color: #167243;
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: #1890ff;
+  background: #167243;
   color: white;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(22, 114, 67, 0.3);
   transform: translateY(-1px);
 }
 
 /* 修复点击时白块问题：为轮廓按钮显式定义 active 与 disabled 状态，避免背景回退为白色 */
 .btn-outline:active:not(:disabled) {
-  background: #1890ff;
+  background: #167243;
   color: #ffffff;
-  border-color: #1890ff;
+  border-color: #167243;
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.25);
+  box-shadow: 0 2px 6px rgba(22, 114, 67, 0.25);
 }
 
 .btn-outline:disabled {
   background: transparent;
-  color: #1890ff;
-  border-color: #1890ff;
+  color: #167243;
+  border-color: #167243;
   opacity: 0.5;
 }
 
 /* 文字按钮 */
 .btn-text {
   background: transparent;
-  color: #1890ff;
+  color: #167243;
   border-color: transparent;
   box-shadow: none;
 }
 
 .btn-text:hover:not(:disabled) {
-  background: rgba(24, 144, 255, 0.08);
-  color: #40a9ff;
+  background: rgba(22, 114, 67, 0.08);
+  color: #5ca977;
   border-color: transparent;
 }
 
@@ -378,8 +413,8 @@ body {
 
 .form-control:focus {
   outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border-color: #167243;
+  box-shadow: 0 0 0 2px rgba(22, 114, 67, 0.2);
 }
 
 .form-control::placeholder {
@@ -577,24 +612,24 @@ body {
 
 /* 主要按钮 - 蓝灰色主题 */
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #1e40af);
+  background: linear-gradient(135deg, #167243, #0b5f39);
   color: white;
-  border-color: #3b82f6;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  border-color: #167243;
+  box-shadow: 0 2px 4px rgba(22, 114, 67, 0.18);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  border-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, #0f8a4b, #167243);
+  border-color: #0f8a4b;
+  box-shadow: 0 4px 12px rgba(22, 114, 67, 0.24);
   transform: translateY(-1px);
 }
 
 .btn-primary:active:not(:disabled) {
-  background: linear-gradient(135deg, #1e40af, #1d4ed8);
-  border-color: #1e40af;
+  background: linear-gradient(135deg, #0b5f39, #167243);
+  border-color: #0b5f39;
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 2px 4px rgba(22, 114, 67, 0.18);
 }
 
 /* 次要按钮 */
@@ -1008,7 +1043,7 @@ body {
 
 .message-toast.info {
   background: var(--info-light);
-  border-color: rgba(24, 144, 255, 0.2);
+  border-color: rgba(22, 114, 67, 0.2);
   color: var(--info-color);
 }
 
@@ -1430,11 +1465,11 @@ body {
 }
 
 .agent-response-content .language-sql {
-  color: #0066cc;
+  color: #167243;
 }
 
 .agent-response-content .language-json {
-  color: #0066cc;
+  color: #167243;
   white-space: pre-wrap !important;
   word-break: break-all;
   overflow-wrap: break-word;

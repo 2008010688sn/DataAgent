@@ -28,7 +28,7 @@ public interface BusinessKnowledgeMapper {
 	 */
 	@Select("""
 			SELECT * FROM business_knowledge
-			WHERE agent_id = #{agentId} AND is_deleted = 0
+			WHERE agent_id = #{agentId} AND is_deleted = false
 			ORDER BY created_time DESC
 			""")
 	List<BusinessKnowledge> selectByAgentId(@Param("agentId") Long agentId);
@@ -36,7 +36,7 @@ public interface BusinessKnowledgeMapper {
 	/**
 	 * Query all business knowledge list
 	 */
-	@Select("SELECT * FROM business_knowledge WHERE is_deleted = 0 ORDER BY created_time DESC")
+	@Select("SELECT * FROM business_knowledge WHERE is_deleted = false ORDER BY created_time DESC")
 	List<BusinessKnowledge> selectAll();
 
 	/**
@@ -44,7 +44,7 @@ public interface BusinessKnowledgeMapper {
 	 */
 	@Select("""
 			SELECT * FROM business_knowledge
-			WHERE agent_id = #{agentId} AND is_deleted = 0
+			WHERE agent_id = #{agentId} AND is_deleted = false
 			  AND (business_term LIKE CONCAT('%', #{keyword}, '%')
 			    OR description LIKE CONCAT('%', #{keyword}, '%')
 			    OR synonyms LIKE CONCAT('%', #{keyword}, '%'))
@@ -86,13 +86,13 @@ public interface BusinessKnowledgeMapper {
 
 	@Select("""
 			SELECT * FROM business_knowledge
-			WHERE id = #{id} AND is_deleted = 0
+			WHERE id = #{id} AND is_deleted = false
 			""")
 	BusinessKnowledge selectById(Long id);
 
 	@Select("""
 			SELECT id FROM business_knowledge
-			WHERE agent_id = #{agentId} AND is_recall = 1 AND is_deleted = 0
+			WHERE agent_id = #{agentId} AND is_recall = true AND is_deleted = false
 			""")
 	List<Long> selectRecalledKnowledgeIds(@Param("agentId") Long agentId);
 
@@ -101,6 +101,6 @@ public interface BusinessKnowledgeMapper {
 			SET is_deleted = #{isDeleted}, updated_time = NOW()
 			WHERE id = #{id}
 			""")
-	int logicalDelete(@Param("id") Long id, @Param("isDeleted") Integer isDeleted);
+	int logicalDelete(@Param("id") Long id, @Param("isDeleted") Boolean isDeleted);
 
 }

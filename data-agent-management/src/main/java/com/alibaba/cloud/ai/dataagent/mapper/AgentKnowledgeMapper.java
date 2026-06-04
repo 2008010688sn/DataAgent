@@ -26,7 +26,7 @@ import java.util.List;
 public interface AgentKnowledgeMapper {
 
 	@Select("""
-			SELECT * FROM agent_knowledge WHERE id = #{id} AND is_deleted = 0
+			SELECT * FROM agent_knowledge WHERE id = #{id} AND is_deleted = false
 			""")
 	AgentKnowledge selectById(@Param("id") Integer id);
 
@@ -82,8 +82,8 @@ public interface AgentKnowledgeMapper {
 			<if test="queryDTO.embeddingStatus != null and queryDTO.embeddingStatus != ''">
 				AND embedding_status = #{queryDTO.embeddingStatus}
 			</if>
-			AND is_deleted = 0
-			LIMIT #{offset}, #{queryDTO.pageSize}
+			AND is_deleted = false
+			LIMIT #{queryDTO.pageSize} OFFSET #{offset}
 			</script>
 			""")
 	List<AgentKnowledge> selectByConditionsWithPage(@Param("queryDTO") AgentKnowledgeQueryDTO queryDTO,
@@ -102,24 +102,24 @@ public interface AgentKnowledgeMapper {
 			<if test="queryDTO.embeddingStatus != null and queryDTO.embeddingStatus != ''">
 				AND embedding_status = #{queryDTO.embeddingStatus}
 			</if>
-			AND is_deleted = 0
+			AND is_deleted = false
 			</script>
 			""")
 	Long countByConditions(@Param("queryDTO") AgentKnowledgeQueryDTO queryDTO);
 
 	@Select("""
-			SELECT id FROM agent_knowledge WHERE agent_id = #{agentId} AND is_recall = 1 AND is_deleted = 0
+			SELECT id FROM agent_knowledge WHERE agent_id = #{agentId} AND is_recall = true AND is_deleted = false
 			""")
 	List<Integer> selectRecalledKnowledgeIds(@Param("agentId") Integer agentId);
 
 	/**
-	 * 查询待清理的“僵尸”记录 条件：is_deleted = 1 AND is_resource_cleaned = 0 AND updated_time <(当前时间
+	 * 查询待清理的“僵尸”记录 条件：is_deleted = true AND is_resource_cleaned = false AND updated_time <(当前时间
 	 * - N分钟)
 	 */
 	@Select("""
 			    SELECT * FROM agent_knowledge
-			    WHERE is_deleted = 1
-			      AND is_resource_cleaned = 0
+			    WHERE is_deleted = true
+			      AND is_resource_cleaned = false
 			      AND updated_time < #{beforeTime}
 			    LIMIT #{limit}
 			""")

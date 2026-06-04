@@ -36,7 +36,7 @@
       />
 
       <!-- 右侧对话栏 -->
-      <el-main style="background-color: white; display: flex; flex-direction: column">
+      <el-main class="run-main">
         <!-- 消息显示区域 -->
         <div class="chat-container" ref="chatContainer">
           <div v-if="!currentSession" class="empty-state">
@@ -135,11 +135,19 @@
             <!-- 流式响应显示区域 -->
             <div v-if="isStreaming" class="streaming-response">
               <div class="streaming-header">
-                <el-icon class="loading-icon"><Loading /></el-icon>
-                <span>智能体正在处理中...</span>
+                <span class="loading-orbit" aria-hidden="true"></span>
+                <span>正在生成答案...</span>
+              </div>
+              <div v-if="isWaitingForAnswerOutput" class="answer-waiting">
+                <span class="answer-waiting-spinner" aria-hidden="true"></span>
+                <span>答案生成中，请稍候</span>
               </div>
               <div class="agent-response-container">
-                <template v-for="(nodeBlock, index) in nodeBlocks" :key="index">
+                <div
+                  v-if="thinkingNodeBlocks.length > 0"
+                  v-html="generateThinkingHtml(thinkingNodeBlocks, !hasFinalAnswerOutput)"
+                ></div>
+                <template v-for="(nodeBlock, index) in finalNodeBlocks" :key="index">
                   <!-- 如果是 Markdown 报告节点，使用 Markdown 或 HTML 组件 -->
                   <div
                     v-if="
@@ -178,7 +186,6 @@
                       />
                     </div>
                   </div>
-                  <!-- 其他节点使用原来的 HTML 渲染方式 -->
                   <div v-else v-html="generateNodeHtml(nodeBlock)"></div>
                 </template>
               </div>
@@ -300,47 +307,163 @@
             </div>
           </div>
           <div class="input-container">
-            <el-button
-              text
-              bg
-              size="small"
-              class="trace-button"
-              :disabled="traceLoading"
-              @click="openTraceDialog"
-            >
-              Trace
-            </el-button>
-            <el-input
-              v-model="userInput"
-              type="textarea"
-              :rows="3"
-              :placeholder="
-                pendingClarify
-                  ? '请输入补充信息，或直接写“按以下假设继续：...”'
-                  : '请输入您的问题...'
-              "
-              :disabled="isStreaming || isSubmittingMessage"
-              @keydown.enter.exact.prevent="sendMessage"
-            />
-            <el-button
-              v-if="!isStreaming"
-              type="primary"
-              :disabled="isSubmittingMessage"
-              @click="sendMessage"
-              circle
-              class="send-button"
-            >
-              <el-icon><Promotion /></el-icon>
-            </el-button>
-            <el-button
-              v-else
-              type="danger"
-              @click="stopStreaming"
-              circle
-              class="send-button stop-button-inline"
-            >
-              <el-icon><CircleClose /></el-icon>
-            </el-button>
+            <div class="input-shell">
+              <el-input
+                v-model="userInput"
+                type="textarea"
+                :rows="5"
+                :placeholder="
+                  pendingClarify
+                    ? 'Add clarification or assumptions...'
+                    : 'Ask a question...'
+                "
+                :disabled="isStreaming || isSubmittingMessage"
+                class="chat-input"
+                @keydown.enter.exact.prevent="sendMessage"
+              />
+              <div class="input-toolbar">
+                <div class="input-toolbar-left">
+                  <el-popover
+                    placement="top-start"
+                    trigger="click"
+                    :width="280"
+                    popper-class="chat-model-popover"
+                    :disabled="isStreaming || isSubmittingMessage"
+                  >
+                    <template #reference>
+                      <el-button
+                        text
+                        bg
+                        size="small"
+                        class="chat-model-trigger"
+                        :loading="chatModelsLoading"
+                        :disabled="isStreaming || isSubmittingMessage"
+                      >
+                        <span class="chat-model-trigger-label">{{ currentChatModelLabel }}</span>
+                        <el-icon class="chat-model-trigger-icon"><ArrowDown /></el-icon>
+                      </el-button>
+                    </template>
+                    <div class="chat-model-menu">
+                      <button
+                        type="button"
+                        class="chat-model-option"
+                        :class="{ active: requestOptions.chatModelConfigId === undefined }"
+                        @click="selectChatModel(undefined)"
+                      >
+                        <span class="chat-model-option-name">Default</span>
+                        <span class="chat-model-option-meta">backend active</span>
+                      </button>
+                      <div class="chat-model-menu-divider"></div>
+                      <button
+                        v-for="model in chatModelOptions"
+                        :key="model.id"
+                        type="button"
+                        class="chat-model-option"
+                        :class="{ active: requestOptions.chatModelConfigId === model.id }"
+                        @click="selectChatModel(model.id)"
+                      >
+                        <span class="chat-model-option-name">{{ model.modelName }}</span>
+                        <span class="chat-model-option-meta">
+                          {{ model.provider }}{{ model.isActive ? ' - default' : '' }}
+                        </span>
+                      </button>
+                      <div v-if="!chatModelsLoading && chatModelOptions.length === 0" class="chat-model-empty">
+                        No chat models configured
+                      </div>
+                    </div>
+                  </el-popover>
+                </div>
+                <div class="input-toolbar-right">
+                  <el-button
+                    text
+                    bg
+                    size="small"
+                    class="trace-inline-button"
+                    :disabled="traceLoading"
+                    title="Trace"
+                    @click="openTraceDialog"
+                  >
+                    <el-icon><Document /></el-icon>
+                  </el-button>
+                  <el-popover
+                    placement="top-end"
+                    trigger="click"
+                    :width="320"
+                    popper-class="context-usage-popover"
+                    @show="loadSessionContextUsage"
+                  >
+                    <template #reference>
+                      <el-button
+                        text
+                        bg
+                        size="small"
+                        class="context-usage-trigger"
+                        :loading="contextUsageLoading"
+                        title="Context usage"
+                      >
+                        <el-icon><Menu /></el-icon>
+                        <span class="context-usage-trigger-text">{{ contextUsagePercent }}%</span>
+                      </el-button>
+                    </template>
+                    <div class="context-usage-panel">
+                      <div class="context-usage-panel-header">
+                        <span>Context usage</span>
+                        <strong>{{ contextUsagePercent }}%</strong>
+                      </div>
+                      <div v-if="contextUsageError" class="context-usage-error">
+                        {{ contextUsageError }}
+                      </div>
+                      <div v-else class="context-usage-detail-list">
+                        <div class="context-usage-summary">
+                          <span>{{ contextUsageLabel }}</span>
+                          <div class="context-usage-bar" aria-hidden="true">
+                            <span :style="{ width: `${contextUsagePercent}%` }"></span>
+                          </div>
+                        </div>
+                        <div class="context-usage-detail-row">
+                          <span>Used</span>
+                          <strong>{{ formatTokenCount(contextUsage?.usedTokens) }}</strong>
+                        </div>
+                        <div class="context-usage-detail-row">
+                          <span>Total</span>
+                          <strong>{{ formatTokenCount(contextUsage?.limitTokens) }}</strong>
+                        </div>
+                        <div class="context-usage-detail-row">
+                          <span>Messages</span>
+                          <strong>{{ contextUsage?.messageCount ?? 0 }}</strong>
+                        </div>
+                        <div class="context-usage-detail-row">
+                          <span>Model</span>
+                          <strong>{{ contextUsageModelLabel }}</strong>
+                        </div>
+                        <div class="context-usage-note">
+                          {{ contextUsage?.estimated ? 'Estimated from visible messages' : 'Exact usage' }}
+                        </div>
+                      </div>
+                    </div>
+                  </el-popover>
+                  <el-button
+                    v-if="!isStreaming"
+                    type="primary"
+                    :disabled="isSubmittingMessage"
+                    @click="sendMessage"
+                    circle
+                    class="send-button"
+                  >
+                    <el-icon><Promotion /></el-icon>
+                  </el-button>
+                  <el-button
+                    v-else
+                    type="danger"
+                    @click="stopStreaming"
+                    circle
+                    class="send-button stop-button-inline"
+                  >
+                    <el-icon><CircleClose /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </el-main>
@@ -936,7 +1059,6 @@
   import { useRoute } from 'vue-router';
   import { ElMessage } from 'element-plus';
   import {
-    Loading,
     Promotion,
     Document,
     Download,
@@ -944,6 +1066,7 @@
     FullScreen,
     Close,
     ArrowDown,
+    Menu,
   } from '@element-plus/icons-vue';
   import hljs from 'highlight.js';
   import { marked } from 'marked';
@@ -964,6 +1087,7 @@
     type AnswerTraceExplain,
     type ChatSession,
     type ChatMessage,
+    type SessionContextUsage,
     type SessionTrace,
     type TraceSpan,
   } from '@/services/chat';
@@ -985,6 +1109,7 @@
   import MarkdownAgentContainer from '@/components/run/markdown';
   import ReportHtmlView from '@/components/run/ReportHtmlView.vue';
   import ResultSetDisplay from '@/components/run/ResultSetDisplay.vue';
+  import modelConfigService, { type ModelConfig } from '@/services/modelConfig';
 
   // 扩展Window接口以包含自定义方法
   declare global {
@@ -1000,6 +1125,16 @@
     nodeName?: string;
   }
 
+  type ChatModelOption = ModelConfig & { id: number };
+  type NodeBlockGroups = {
+    thinkingBlocks: AgentResponse[][];
+    finalBlocks: AgentResponse[][];
+  };
+  type SaveGroupedAssistantOptions = {
+    saveFinalBlocks?: boolean;
+    thinkingExpanded?: boolean;
+  };
+
   const isClarifyMetadata = (
     metadata?: (ClarifyMetadata & Record<string, any>) | null,
   ): metadata is ClarifyMetadata & { clarifyRequired: true; originalQuery: string } => {
@@ -1010,7 +1145,6 @@
     name: 'AgentRun',
     components: {
       BaseLayout,
-      Loading,
       Promotion,
       Document,
       Download,
@@ -1018,6 +1152,7 @@
       FullScreen,
       Close,
       ArrowDown,
+      Menu,
       ChatSessionSidebar,
       PresetQuestions,
       MarkdownAgentContainer,
@@ -1108,9 +1243,16 @@
         },
       });
       const requestOptions = ref({
-        reportFormat: 'markdown' as 'markdown' | 'html', // 'markdown' | 'html'，控制报告展示方式
+        reportFormat: 'markdown' as 'markdown' | 'html',
         clarifyCheckEnabled: false,
+        chatModelConfigId: undefined as number | undefined,
       });
+      const chatModelOptions = ref<ChatModelOption[]>([]);
+      const chatModelsLoading = ref(false);
+      const contextUsage = ref<SessionContextUsage | null>(null);
+      const contextUsageLoading = ref(false);
+      const contextUsageError = ref('');
+      const contextUsageRequestId = ref(0);
       const showReportFullscreen = ref(false);
       const fullscreenReportContent = ref('');
       const inputControlsCollapsed = ref(false);
@@ -1132,6 +1274,113 @@
       const resultSetPageSize = ref(20);
 
       const agentId = computed(() => route.params.id as string);
+
+      const formatChatModelLabel = (model: ChatModelOption): string => {
+        const provider = model.provider ? `${model.provider} / ` : '';
+        const active = model.isActive ? '（默认）' : '';
+        return `${provider}${model.modelName}${active}`;
+      };
+
+      const currentChatModelLabel = computed(() => {
+        const selected = chatModelOptions.value.find(
+          model => model.id === requestOptions.value.chatModelConfigId,
+        );
+        return selected ? selected.modelName : '默认模型';
+      });
+
+      const formatTokenCount = (value?: number | null): string => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          return '--';
+        }
+        if (value >= 1000000) {
+          return `${(value / 1000000).toFixed(1)}m`;
+        }
+        if (value >= 1000) {
+          return `${(value / 1000).toFixed(1)}k`;
+        }
+        return String(value);
+      };
+
+      const contextUsagePercent = computed(() => {
+        const ratio = contextUsage.value?.usageRatio ?? 0;
+        return Math.max(0, Math.min(100, Math.round(ratio * 100)));
+      });
+
+      const contextUsageLabel = computed(() => {
+        if (!contextUsage.value && contextUsageLoading.value) {
+          return 'loading';
+        }
+        return `${formatTokenCount(contextUsage.value?.usedTokens)} / ${formatTokenCount(
+          contextUsage.value?.limitTokens,
+        )}`;
+      });
+
+      const contextUsageModelLabel = computed(() => {
+        return contextUsage.value?.modelName || currentChatModelLabel.value;
+      });
+
+      const loadSessionContextUsage = async () => {
+        const session = currentSession.value;
+        if (!session) {
+          contextUsage.value = null;
+          contextUsageError.value = '';
+          return;
+        }
+        const requestId = contextUsageRequestId.value + 1;
+        contextUsageRequestId.value = requestId;
+        contextUsageLoading.value = true;
+        contextUsageError.value = '';
+        try {
+          const usage = await ChatService.getSessionContext(
+            session.id,
+            requireResolvedAgentId(),
+            requestOptions.value.chatModelConfigId,
+          );
+          if (contextUsageRequestId.value === requestId && currentSession.value?.id === session.id) {
+            contextUsage.value = usage;
+          }
+        } catch (error) {
+          if (contextUsageRequestId.value === requestId) {
+            contextUsage.value = null;
+            contextUsageError.value = 'Context usage unavailable';
+          }
+          console.warn('Failed to load context usage:', error);
+        } finally {
+          if (contextUsageRequestId.value === requestId) {
+            contextUsageLoading.value = false;
+          }
+        }
+      };
+
+      const selectChatModel = async (modelId?: number) => {
+        requestOptions.value.chatModelConfigId = modelId;
+        await loadSessionContextUsage();
+      };
+
+      const loadChatModelOptions = async () => {
+        chatModelsLoading.value = true;
+        try {
+          const configs = await modelConfigService.list();
+          chatModelOptions.value = configs.filter(
+            (config): config is ChatModelOption =>
+              config.modelType === 'CHAT' && typeof config.id === 'number',
+          );
+          if (
+            requestOptions.value.chatModelConfigId &&
+            !chatModelOptions.value.some(model => model.id === requestOptions.value.chatModelConfigId)
+          ) {
+            requestOptions.value.chatModelConfigId = undefined;
+          }
+          if (currentSession.value) {
+            await loadSessionContextUsage();
+          }
+        } catch (error) {
+          console.error('Failed to load chat model configs:', error);
+          ElMessage.warning('对话模型列表加载失败，将使用默认模型');
+        } finally {
+          chatModelsLoading.value = false;
+        }
+      };
 
       const parseAgentId = (value: unknown): number | null => {
         if (typeof value === 'number' && Number.isFinite(value)) {
@@ -1208,6 +1457,8 @@
             answerExplain.value = null;
             answerExplainError.value = '';
             pendingClarify.value = null;
+            contextUsage.value = null;
+            contextUsageError.value = '';
             return;
           }
           syncStateToView(session.id, {
@@ -1217,12 +1468,11 @@
             answerExplainVisible,
             pendingClarify,
           });
-          pendingClarify.value = null;
-          getSessionState(session.id).pendingClarify = null;
           currentMessages.value = await ChatService.getSessionMessages(
             session.id,
             requireResolvedAgentId(),
           );
+          await loadSessionContextUsage();
           await preloadSessionLatestObservability(session.id);
           scrollToBottom();
         } catch (error) {
@@ -1289,8 +1539,9 @@
 
         isSubmittingMessage.value = true;
         const needsTitle = !currentSession.value?.title || currentSession.value.title === '新会话';
-        const activeClarify: PendingClarifyState | null = null;
+        const activeClarify = pendingClarify.value;
         const requestQuery = activeClarify?.originalQuery ?? userInput.value.trim();
+        const humanFeedbackContent = activeClarify ? userInput.value.trim() : undefined;
         const userMessage: ChatMessage = {
           sessionId: currentSession.value.id,
           role: 'user',
@@ -1307,16 +1558,18 @@
           );
           currentMessages.value.push(savedMessage);
           getSessionState(currentSession.value.id);
+          await loadSessionContextUsage();
 
           const request: AgentRequest = {
             agentId: String(requireResolvedAgentId()),
             query: requestQuery,
-            clarifyCheckEnabled: false,
-            humanFeedback: false,
-            humanFeedbackContent: undefined,
+            clarifyCheckEnabled: requestOptions.value.clarifyCheckEnabled,
+            humanFeedback: Boolean(activeClarify),
+            humanFeedbackContent,
             rejectedPlan: false,
             threadId: currentSession.value.id,
             runtimeRequestId: createRuntimeRequestId(),
+            chatModelConfigId: requestOptions.value.chatModelConfigId,
           };
 
           userInput.value = '';
@@ -1397,6 +1650,39 @@
         await ChatService.saveMessage(sessionId, requireResolvedAgentId(), aiMessage);
       };
 
+      const saveGroupedAssistantMessages = async (
+        sessionId: string,
+        blocks: AgentResponse[][],
+        request?: AgentRequest | null,
+        options: SaveGroupedAssistantOptions = {},
+      ): Promise<void> => {
+        if (!blocks || blocks.length === 0) {
+          return;
+        }
+
+        const groups = splitNodeBlocks(blocks);
+        const saveFinalBlocks = options.saveFinalBlocks ?? true;
+        const thinkingExpanded = options.thinkingExpanded ?? groups.finalBlocks.length === 0;
+
+        if (groups.thinkingBlocks.length > 0) {
+          const thinkingMessage: ChatMessage = {
+            sessionId,
+            role: 'assistant',
+            content: generateThinkingHtml(groups.thinkingBlocks, thinkingExpanded),
+            messageType: 'html',
+          };
+          await ChatService.saveMessage(sessionId, requireResolvedAgentId(), thinkingMessage);
+        }
+
+        if (!saveFinalBlocks) {
+          return;
+        }
+
+        for (const block of groups.finalBlocks) {
+          await saveAssistantNodeMessage(sessionId, block, request);
+        }
+      };
+
       const sendAgentRequest = async (request: AgentRequest) => {
         const sessionId = currentSession.value!.id;
         currentSession.value!.title;
@@ -1408,29 +1694,11 @@
 
           let currentNodeName: string | null = null;
           let currentBlockIndex: number = -1;
-          const pendingSavePromises: Promise<void>[] = [];
 
           // 重置报告状态
           resetReportState(sessionState, request);
 
-          const saveNodeMessage = (node: AgentResponse[]): Promise<void> => {
-            return saveAssistantNodeMessage(sessionId, node, request).catch(error => {
-              console.error('保存AI消息失败:', error);
-            });
-          };
-
           // 发送流式请求
-          const persistBlockAt = async (blockIndex: number): Promise<void> => {
-            if (blockIndex < 0 || !sessionState.nodeBlocks[blockIndex]) {
-              return;
-            }
-            await saveNodeMessage(sessionState.nodeBlocks[blockIndex]);
-            sessionState.persistedBlockCount = Math.max(
-              sessionState.persistedBlockCount,
-              blockIndex + 1,
-            );
-          };
-
           const closeStream = await GraphService.streamSearch(
             request,
             (response: AgentResponse) => {
@@ -1456,12 +1724,6 @@
                   currentNodeName === null || response.nodeName !== currentNodeName;
 
                 if (isNewNode) {
-                  // 保存上一个节点的消息（如果有）
-                  if (currentBlockIndex >= 0 && sessionState.nodeBlocks[currentBlockIndex]) {
-                    const savePromise = persistBlockAt(currentBlockIndex);
-                    pendingSavePromises.push(savePromise);
-                  }
-
                   // 创建新的节点块
                   const newBlock: AgentResponse = {
                     ...response,
@@ -1516,10 +1778,6 @@
                 }
               } else if (response.textType === TextType.RESULT_SET) {
                 currentNodeName = 'result_set';
-                if (currentBlockIndex >= 0 && sessionState.nodeBlocks[currentBlockIndex]) {
-                  const savePromise = persistBlockAt(currentBlockIndex);
-                  pendingSavePromises.push(savePromise);
-                }
                 // 创建新的节点块
                 const newBlock: AgentResponse = {
                   ...response,
@@ -1533,12 +1791,6 @@
                   currentNodeName === null || response.nodeName !== currentNodeName;
 
                 if (isNewNode) {
-                  // 保存上一个节点的消息（如果有）
-                  if (currentBlockIndex >= 0 && sessionState.nodeBlocks[currentBlockIndex]) {
-                    const savePromise = persistBlockAt(currentBlockIndex);
-                    pendingSavePromises.push(savePromise);
-                  }
-
                   // 创建新的节点块
                   const newBlock: AgentResponse = {
                     ...response,
@@ -1577,10 +1829,11 @@
             async (error: Error) => {
               ElMessage.error(`流式请求失败: ${error.message}`);
               console.error('error: ' + error);
-              // 等待所有待处理的保存操作完成
-              if (pendingSavePromises.length > 0) {
-                await Promise.all(pendingSavePromises);
-              }
+              await saveGroupedAssistantMessages(sessionId, sessionState.nodeBlocks, request).catch(
+                saveError => {
+                  console.error('保存AI消息失败:', saveError);
+                },
+              );
               sessionState.isStreaming = false;
               sessionState.persistedBlockCount = 0;
               sessionState.closeStream = null;
@@ -1593,13 +1846,15 @@
             },
             async () => {
               try {
-                // 等待所有待处理的保存操作完成
-                if (pendingSavePromises.length > 0) {
-                  await Promise.all(pendingSavePromises);
-                }
-
                 // 保存报告到后端
                 if (sessionState.htmlReportContent) {
+                  await saveGroupedAssistantMessages(sessionId, sessionState.nodeBlocks, request, {
+                    saveFinalBlocks: false,
+                    thinkingExpanded: false,
+                  }).catch(error => {
+                    console.error('保存思考过程失败:', error);
+                  });
+
                   const htmlReportMessage: ChatMessage = {
                     sessionId,
                     role: 'assistant',
@@ -1629,6 +1884,13 @@
                     nodeBlocks.value = [];
                   }
                 } else if (sessionState.markdownReportContent) {
+                  await saveGroupedAssistantMessages(sessionId, sessionState.nodeBlocks, request, {
+                    saveFinalBlocks: false,
+                    thinkingExpanded: false,
+                  }).catch(error => {
+                    console.error('保存思考过程失败:', error);
+                  });
+
                   const markdownMessage: ChatMessage = {
                     sessionId,
                     role: 'assistant',
@@ -1657,11 +1919,13 @@
                     nodeBlocks.value = [];
                   }
                 } else {
-                  // 其他节点，可能是错误或人类反馈模式
-                  // 保存最后一个节点的消息（如果有）
-                  if (currentBlockIndex >= 0 && sessionState.nodeBlocks[currentBlockIndex]) {
-                    await persistBlockAt(currentBlockIndex);
-                  }
+                  await saveGroupedAssistantMessages(
+                    sessionId,
+                    sessionState.nodeBlocks,
+                    request,
+                  ).catch(error => {
+                    console.error('保存AI消息失败:', error);
+                  });
 
                   // 所有节点处理完成
                   sessionState.isStreaming = false;
@@ -1763,12 +2027,188 @@
       };
 
       // 生成节点容器的HTML代码
-      const generateNodeHtml = (node: AgentResponse[]) => {
-        const content = formatNodeContent(node);
+      const getNodeBlockTitle = (node: AgentResponse[]) => {
+        const nodeName = node.length > 0 && node[0].nodeName ? node[0].nodeName : '';
+        if (!nodeName) {
+          return '空节点';
+        }
+        if (nodeName === 'planner-reasoning' || nodeName === 'AgentScopeRuntime') {
+          return '最终回答';
+        }
+        if (nodeName === 'ReportGeneratorNode') {
+          return '分析报告';
+        }
+        if (nodeName.startsWith('tool:')) {
+          return `工具调用：${getToolDisplayName(nodeName.slice('tool:'.length))}`;
+        }
+        return nodeName;
+      };
+
+      const getToolDisplayName = (toolName: string) => {
+        const toolDisplayNames: Record<string, string> = {
+          'domain_business_knowledge.search': '业务知识检索',
+          'semantic_model.search': '语义模型检索',
+          'sql_guard.check': 'SQL 校验',
+        };
+        return toolDisplayNames[toolName] || toolName;
+      };
+
+      const isIntrinsicFinalNode = (node: AgentResponse[]) => {
+        if (!node || node.length === 0) {
+          return false;
+        }
+        const firstNode = node[0];
+        return (
+          firstNode.nodeName === 'AgentScopeRuntime' ||
+          firstNode.nodeName === 'ReportGeneratorNode' ||
+          firstNode.textType === TextType.RESULT_SET
+        );
+      };
+
+      const hasDatasourceSearchResult = (node: AgentResponse[]) => {
+        if (!node || node.length === 0) {
+          return false;
+        }
+        const nodeName = node[0].nodeName || '';
+        if (!nodeName.startsWith('tool:datasource.')) {
+          return false;
+        }
+        const text = node.map(item => item.text || '').join('');
+        return /"action"\s*:\s*"SEARCH"/.test(text);
+      };
+
+      const splitNodeBlocks = (blocks: AgentResponse[][]): NodeBlockGroups => {
+        const hasAgentRuntimeFinal = blocks.some(
+          block => block.length > 0 && block[0].nodeName === 'AgentScopeRuntime',
+        );
+        const groups: NodeBlockGroups = {
+          thinkingBlocks: [],
+          finalBlocks: [],
+        };
+        let resultEvidenceSeen = false;
+
+        for (const block of blocks) {
+          if (!block || block.length === 0) {
+            continue;
+          }
+          const nodeName = block[0].nodeName || '';
+          if (isIntrinsicFinalNode(block)) {
+            groups.finalBlocks.push(block);
+            resultEvidenceSeen = true;
+            continue;
+          }
+          if (nodeName === 'planner-reasoning') {
+            if (!hasAgentRuntimeFinal && resultEvidenceSeen) {
+              groups.finalBlocks.push(block);
+            } else {
+              groups.thinkingBlocks.push(block);
+            }
+            continue;
+          }
+
+          groups.thinkingBlocks.push(block);
+          if (hasDatasourceSearchResult(block)) {
+            resultEvidenceSeen = true;
+          }
+        }
+
+        return groups;
+      };
+
+      const nodeBlockGroups = computed(() => splitNodeBlocks(nodeBlocks.value));
+      const thinkingNodeBlocks = computed(() => nodeBlockGroups.value.thinkingBlocks);
+      const finalNodeBlocks = computed(() => nodeBlockGroups.value.finalBlocks);
+      const hasFinalAnswerOutput = computed(() => finalNodeBlocks.value.length > 0);
+
+      const isFinalOutputNode = (node: AgentResponse[]) => {
+        return isIntrinsicFinalNode(node);
+      };
+
+      const shouldCollapseNodeBlock = (node: AgentResponse[]) => {
+        return node.length > 0 && !isFinalOutputNode(node);
+      };
+
+      const isPlainFinalAnswerNode = (node: AgentResponse[]) => {
+        if (!node || node.length === 0) {
+          return false;
+        }
+        const nodeName = node[0].nodeName || '';
+        return nodeName === 'AgentScopeRuntime' || nodeName === 'planner-reasoning';
+      };
+
+      const isWaitingForAnswerOutput = computed(
+        () => isStreaming.value && nodeBlocks.value.length === 0,
+      );
+
+      const getThinkingStepTitle = (node: AgentResponse[]) => {
+        const nodeName = node.length > 0 && node[0].nodeName ? node[0].nodeName : '';
+        if (nodeName === 'planner-reasoning') {
+          return '理解问题';
+        }
+        if (nodeName.startsWith('tool:')) {
+          return `调用工具：${getToolDisplayName(nodeName.slice('tool:'.length))}`;
+        }
+        if (nodeName === 'ReportGeneratorNode') {
+          return '生成报告';
+        }
+        return getNodeBlockTitle(node);
+      };
+
+      const generateThinkingHtml = (blocks: AgentResponse[][], expanded: boolean) => {
+        const openAttr = expanded ? ' open' : '';
+        const steps = blocks
+          .map((block, index) => {
+            const title = escapeHtml(getThinkingStepTitle(block));
+            const content = formatNodeContent(block);
+            return `
+              <li class="agent-thinking-step">
+                <span class="agent-thinking-step-index">${index + 1}</span>
+                <div class="agent-thinking-step-body">
+                  <div class="agent-thinking-step-title">${title}</div>
+                  <div class="agent-thinking-step-content">${content}</div>
+                </div>
+              </li>
+            `;
+          })
+          .join('');
 
         return `
+          <details class="agent-response-block agent-thinking-block agent-thinking-group" style="display: block !important; width: 100% !important;"${openAttr}>
+            <summary class="agent-response-title agent-response-summary">
+              <span class="agent-response-title-text">Thinking</span>
+              <span class="agent-thinking-count">${blocks.length} 步</span>
+              <span class="agent-response-summary-hint">查看</span>
+            </summary>
+            <div class="agent-response-content agent-thinking-content">
+              <ol class="agent-thinking-steps">${steps}</ol>
+            </div>
+          </details>
+        `;
+      };
+
+      const generateNodeHtml = (node: AgentResponse[]) => {
+        const content = formatNodeContent(node);
+        const title = escapeHtml(getNodeBlockTitle(node));
+
+        if (isPlainFinalAnswerNode(node)) {
+          return `
+        <div class="agent-final-answer-content" style="display: block !important; width: 100% !important;">${content}</div>
+      `;
+        }
+        if (shouldCollapseNodeBlock(node)) {
+          return `
+        <details class="agent-response-block agent-thinking-block" style="display: block !important; width: 100% !important;">
+          <summary class="agent-response-title agent-response-summary">
+            <span class="agent-response-title-text">Thinking · ${title}</span>
+            <span class="agent-response-summary-hint">查看</span>
+          </summary>
+          <div class="agent-response-content">${content}</div>
+        </details>
+      `;
+        }
+        return `
         <div class="agent-response-block" style="display: block !important; width: 100% !important;">
-          <div class="agent-response-title">${node.length > 0 ? node[0].nodeName : '空节点'}</div>
+          <div class="agent-response-title">${title}</div>
           <div class="agent-response-content">${content}</div>
         </div>
       `;
@@ -2500,27 +2940,12 @@
 
           // 保存已接收的节点消息
           if (sessionState.nodeBlocks && sessionState.nodeBlocks.length > 0) {
-            const saveNodeMessage = (node: AgentResponse[]): Promise<void> => {
-              return saveAssistantNodeMessage(sessionId, node, sessionState.lastRequest).catch(
-                error => {
-                  console.error('保存AI消息失败:', error);
-                },
-              );
-            };
-
-            // 保存所有未保存的节点块
-            const basePersistedCount = sessionState.persistedBlockCount;
-            const unsavedBlocks = sessionState.nodeBlocks.slice(basePersistedCount);
-            const savePromises = unsavedBlocks.map((block, index) =>
-              saveNodeMessage(block).then(() => {
-                sessionState.persistedBlockCount = Math.max(
-                  sessionState.persistedBlockCount,
-                  basePersistedCount + index + 1,
-                );
-              }),
-            );
-            await Promise.all(savePromises).catch(error => {
-              console.error('保存节点消息时出错:', error);
+            await saveGroupedAssistantMessages(
+              sessionId,
+              sessionState.nodeBlocks,
+              sessionState.lastRequest,
+            ).catch(error => {
+              console.error('保存AI消息失败:', error);
             });
           }
 
@@ -2653,7 +3078,7 @@
 
       // 生命周期
       onMounted(async () => {
-        await loadAgent();
+        await Promise.all([loadAgent(), loadChatModelOptions()]);
       });
 
       return {
@@ -2680,8 +3105,25 @@
         latestExplainRuntimeRequestId,
         chatContainer,
         nodeBlocks,
+        thinkingNodeBlocks,
+        finalNodeBlocks,
+        hasFinalAnswerOutput,
+        isWaitingForAnswerOutput,
         agentId,
         resultSetPageSize,
+        chatModelOptions,
+        chatModelsLoading,
+        contextUsage,
+        contextUsageLoading,
+        contextUsageError,
+        contextUsagePercent,
+        contextUsageLabel,
+        contextUsageModelLabel,
+        formatTokenCount,
+        formatChatModelLabel,
+        currentChatModelLabel,
+        loadSessionContextUsage,
+        selectChatModel,
         options,
         traceSearchKeyword,
         flattenedTraceSpans,
@@ -2699,6 +3141,8 @@
         isStructuredTraceValue,
         formatStructuredTraceValue,
         getMarkdownContentFromNode,
+        getNodeBlockTitle,
+        shouldCollapseNodeBlock,
         selectSession,
         sendMessage,
         cancelPendingClarify,
@@ -2706,6 +3150,7 @@
         formatMessageContent,
         formatNodeContent,
         generateNodeHtml,
+        generateThinkingHtml,
         openReportFullscreen,
         closeReportFullscreen,
         downloadMarkdownReportFromMessage,
@@ -2727,19 +3172,19 @@
 <style scoped>
   /* CSS 变量定义 */
   :root {
-    --trace-primary-color: #409eff;
-    --trace-primary-light: #66b1ff;
-    --trace-border-color: #e8f1fa;
-    --trace-border-hover: #b8daff;
+    --trace-primary-color: #167243;
+    --trace-primary-light: #5ca977;
+    --trace-border-color: #d8e7d4;
+    --trace-border-hover: #9fca9f;
     --trace-bg-gradient-start: #ffffff;
-    --trace-bg-gradient-end: #f8fcff;
-    --trace-text-primary: #1e3a5f;
-    --trace-text-secondary: #5a7291;
-    --trace-text-meta: #6b7f95;
-    --trace-shadow-sm: 0 2px 8px rgba(37, 99, 235, 0.08);
+    --trace-bg-gradient-end: #f7faf3;
+    --trace-text-primary: #173f2a;
+    --trace-text-secondary: #5f7467;
+    --trace-text-meta: #7d9184;
+    --trace-shadow-sm: 0 2px 8px rgba(34, 94, 58, 0.08);
     --trace-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
-    --trace-shadow-lg: 0 8px 24px rgba(64, 158, 255, 0.15);
-    --trace-shadow-hover: 0 4px 12px rgba(37, 99, 235, 0.15);
+    --trace-shadow-lg: 0 8px 24px rgba(22, 114, 67, 0.13);
+    --trace-shadow-hover: 0 4px 12px rgba(22, 114, 67, 0.16);
     --trace-indent-size: 32px;
     --trace-base-padding: 20px;
     --trace-border-radius: 16px;
@@ -2748,13 +3193,24 @@
   }
 
   /* 聊天容器样式 */
+  .run-main {
+    display: flex;
+    flex-direction: column;
+    background:
+      linear-gradient(180deg, rgba(247, 250, 244, 0.96), rgba(239, 246, 235, 0.96)),
+      repeating-linear-gradient(45deg, transparent 0 18px, rgba(22, 114, 67, 0.025) 18px 19px);
+    padding: 18px 20px;
+  }
+
   .chat-container {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    padding: 22px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid #d8e7d4;
+    border-radius: 10px;
+    margin-bottom: 18px;
+    box-shadow: 0 12px 32px rgba(34, 94, 58, 0.08);
   }
 
   .clarify-banner {
@@ -2879,28 +3335,29 @@
 
   .message-text {
     padding: 12px 16px;
-    border-radius: 12px;
+    border-radius: 8px;
     line-height: 1.5;
     word-wrap: break-word;
   }
 
   .message.user .message-text {
-    background: #409eff;
+    background: #167243;
     color: white;
   }
 
   .message.assistant .message-text {
-    background: white;
-    color: #303133;
-    border: 1px solid #e8e8e8;
+    background: #fffef8;
+    color: #183627;
+    border: 1px solid #d8e7d4;
   }
 
   /* 流式响应样式 */
   .streaming-response {
-    background: white;
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
+    background: #fffef8;
+    border: 1px solid #d8e7d4;
+    border-radius: 10px;
     padding: 16px;
+    box-shadow: 0 10px 24px rgba(34, 94, 58, 0.08);
   }
 
   .streaming-header {
@@ -2909,22 +3366,49 @@
     gap: 8px;
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #e4eee1;
   }
 
   .loading-icon {
     animation: spin 1s linear infinite;
-    color: #409eff;
+    color: #167243;
   }
 
   .streaming-header span {
     font-weight: 500;
-    color: #409eff;
+    color: #167243;
+  }
+
+  .loading-orbit,
+  .answer-waiting-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #d8e7d4;
+    border-top-color: #167243;
+    border-radius: 50%;
+    animation: spin 0.85s linear infinite;
+    flex: 0 0 auto;
+  }
+
+  .answer-waiting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 96px;
+    color: #5f7467;
+    font-size: 14px;
+  }
+
+  .answer-waiting-spinner {
+    width: 24px;
+    height: 24px;
+    border-width: 3px;
   }
 
   .stop-button-inline {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
   }
 
   /* 节点容器样式 */
@@ -2935,25 +3419,168 @@
   }
 
   .agent-response-block {
-    background: #f8f9fa;
-    border: 1px solid #e8e8e8;
+    background: #f5faf2;
+    border: 1px solid #d8e7d4;
     border-radius: 8px;
     overflow: hidden;
     transition: all 0.3s ease;
   }
 
   .agent-response-block:hover {
-    border-color: #409eff;
-    box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+    border-color: #9fca9f;
+    box-shadow: 0 2px 8px rgba(22, 114, 67, 0.1);
   }
 
   .agent-response-title {
-    background: #ecf5ff;
+    background: #edf8ef;
     padding: 12px 16px;
     font-weight: 600;
-    color: #409eff;
-    border-bottom: 1px solid #e8e8e8;
+    color: #167243;
+    border-bottom: 1px solid #d8e7d4;
     font-size: 14px;
+  }
+
+  .agent-thinking-block {
+    background: #fbfdfb;
+  }
+
+  .agent-thinking-group {
+    border-color: #e2ebe0;
+    box-shadow: none;
+  }
+
+  .agent-thinking-group:hover {
+    border-color: #d7e4d4;
+    box-shadow: none;
+  }
+
+  .agent-thinking-group .agent-response-title {
+    background: #f7faf7;
+    color: #6f8a75;
+    border-bottom-color: #e2ebe0;
+  }
+
+  .agent-response-summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .agent-response-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .agent-response-summary::before {
+    content: '>';
+    flex: 0 0 auto;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+  }
+
+  .agent-thinking-block[open] .agent-response-summary::before {
+    transform: rotate(90deg);
+  }
+
+  .agent-response-title-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-response-summary-hint {
+    flex: 0 0 auto;
+    color: #8a938d;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .agent-thinking-block[open] .agent-response-summary-hint {
+    font-size: 0;
+  }
+
+  .agent-thinking-block[open] .agent-response-summary-hint::after {
+    content: '收起';
+    font-size: 12px;
+  }
+
+  .agent-thinking-count {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 2px 8px;
+    border: 1px solid #e0eadf;
+    border-radius: 999px;
+    color: #7a947f;
+    background: #fbfdfb;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .agent-thinking-content {
+    padding: 0;
+    white-space: normal;
+    font-family: inherit;
+  }
+
+  .agent-thinking-steps {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .agent-thinking-step {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .agent-thinking-step + .agent-thinking-step {
+    border-top: 1px solid #edf3ec;
+  }
+
+  .agent-thinking-step-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #dce8da;
+    border-radius: 50%;
+    color: #7b977f;
+    background: #fbfdfb;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .agent-thinking-step-body {
+    min-width: 0;
+  }
+
+  .agent-thinking-step-title {
+    margin-bottom: 8px;
+    color: #6c856f;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .agent-thinking-step-content {
+    color: #6e7f72;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .agent-thinking-step-content pre {
+    margin: 6px 0 0;
   }
 
   .agent-response-content {
@@ -2962,6 +3589,15 @@
     min-height: 40px;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 14px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #183627;
+    background: #fffef8;
+  }
+
+  .agent-final-answer-content {
+    color: #183627;
+    line-height: 1.75;
     white-space: pre-wrap;
     word-wrap: break-word;
   }
@@ -3014,10 +3650,10 @@
     display: block;
     overflow-x: auto;
     color: #24292e;
-    background: #f6f8fa;
+    background: #f7faf3;
     padding: 16px;
     border-radius: 6px;
-    border: 1px solid #e1e4e8;
+    border: 1px solid #d8e7d4;
   }
 
   /* HTML报告消息样式 */
@@ -3027,16 +3663,16 @@
     align-items: center;
     gap: 16px;
     padding: 16px;
-    background: #f8fbff;
+    background: #f7faf3;
     border-radius: 12px;
-    border: 1px solid #e1f0ff;
+    border: 1px solid #d8e7d4;
   }
 
   /* Markdown报告消息样式 */
   .markdown-report-message {
-    background: white;
-    border: 1px solid #e8e8e8;
-    border-radius: 12px;
+    background: #fffef8;
+    border: 1px solid #d8e7d4;
+    border-radius: 10px;
     padding: 16px;
     margin-bottom: 16px;
   }
@@ -3047,7 +3683,7 @@
     align-items: center;
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #e4eee1;
   }
 
   .markdown-report-content {
@@ -3058,7 +3694,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #409eff;
+    color: #167243;
     font-size: 16px;
     font-weight: 500;
   }
@@ -3123,15 +3759,16 @@
 
   /* 输入区域样式 */
   .input-area {
-    background: white;
-    border-radius: 8px;
+    background: #fffef8;
+    border-radius: 10px;
     padding: 16px;
-    border: 1px solid #e8e8e8;
+    border: 1px solid #d8e7d4;
+    box-shadow: 0 10px 24px rgba(34, 94, 58, 0.08);
   }
 
   .input-controls {
     margin-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #e4eee1;
   }
 
   .input-controls-header {
@@ -3141,12 +3778,12 @@
     padding: 8px 0;
     cursor: pointer;
     user-select: none;
-    color: #606266;
+    color: #5f7467;
     font-size: 14px;
   }
 
   .input-controls-header:hover {
-    color: #409eff;
+    color: #167243;
   }
 
   .input-controls-title {
@@ -3185,18 +3822,356 @@
 
   .switch-label {
     font-size: 14px;
-    color: #606266;
+    color: #5f7467;
   }
 
   .send-button {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-color: #2f9d55;
+    background: #2f9d55;
+    box-shadow: 0 8px 18px rgba(22, 114, 67, 0.2);
+  }
+
+  .send-button:hover,
+  .send-button:focus {
+    border-color: #247d44;
+    background: #247d44;
+  }
+
+  .send-button.is-disabled,
+  .send-button.is-disabled:hover,
+  .send-button.is-disabled:focus {
+    border-color: #b9d4ba;
+    background: #b9d4ba;
+    box-shadow: none;
+  }
+
+  .stop-button-inline,
+  .stop-button-inline:hover,
+  .stop-button-inline:focus {
+    border-color: #d85858;
+    background: #d85858;
+    box-shadow: 0 8px 18px rgba(216, 88, 88, 0.2);
   }
 
   .input-container {
     display: flex;
     gap: 12px;
     align-items: flex-end;
+  }
+
+  .input-shell {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #cfe0c8;
+    border-radius: 10px;
+    background: #fffdf6;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 30px rgba(34, 94, 58, 0.08);
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .input-shell:focus-within {
+    border-color: #8ebe93;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 0 0 3px rgba(95, 155, 104, 0.14),
+      0 12px 30px rgba(34, 94, 58, 0.1);
+  }
+
+  .chat-input {
+    width: 100%;
+  }
+
+  .chat-input :deep(.el-textarea__inner) {
+    min-height: 132px !important;
+    padding: 14px 16px 8px;
+    resize: vertical;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    color: #193d29;
+    line-height: 1.6;
+  }
+
+  .chat-input :deep(.el-textarea__inner:focus) {
+    box-shadow: none;
+  }
+
+  .input-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 8px 10px 10px 12px;
+    border-top: 1px solid #edf2e9;
+    background: linear-gradient(180deg, rgba(250, 252, 244, 0.75) 0%, #f7fbef 100%);
+  }
+
+  .input-toolbar-left,
+  .input-toolbar-right {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .input-toolbar-left {
+    flex: 1;
+  }
+
+  .input-toolbar-right {
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .trace-inline-button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #d6e2d0;
+    border-radius: 7px;
+    background: #f3f7ee;
+    color: #536b5b;
+    font-weight: 600;
+  }
+
+  .trace-inline-button:hover,
+  .trace-inline-button:focus {
+    color: #167243;
+    background: #eef7eb;
+    border-color: #b8d1b2;
+  }
+
+  .trace-inline-button :deep(.el-icon) {
+    margin-right: 0;
+  }
+
+  .chat-model-trigger {
+    max-width: min(260px, 100%);
+    height: 32px;
+    padding: 0 11px;
+    color: #325742;
+    background: #eef7eb;
+    border: 1px solid #d1e2cb;
+    border-radius: 7px;
+    font-weight: 600;
+  }
+
+  .chat-model-trigger :deep(span) {
+    min-width: 0;
+  }
+
+  .chat-model-trigger-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chat-model-trigger-icon {
+    margin-left: 4px;
+    flex: 0 0 auto;
+  }
+
+  :deep(.chat-model-popover) {
+    padding: 6px;
+    border-radius: 8px;
+    background: #fffdf6;
+    border: 1px solid #cfe3ca;
+    box-shadow: 0 12px 32px rgba(34, 94, 58, 0.16);
+  }
+
+  .chat-model-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .chat-model-option {
+    appearance: none;
+    border: 0;
+    width: 100%;
+    min-height: 40px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    background: transparent;
+    color: #173f2a;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .chat-model-option:hover,
+  .chat-model-option.active {
+    background: #eef7eb;
+  }
+
+  .chat-model-option-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  .chat-model-option-meta {
+    color: #6f8375;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .chat-model-menu-divider {
+    height: 1px;
+    margin: 4px 0;
+    background: #d8e7d4;
+  }
+
+  .chat-model-empty {
+    padding: 10px 8px;
+    color: #6f8375;
+    font-size: 13px;
+  }
+
+  .context-usage-trigger {
+    width: 42px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #d6e2d0;
+    background: #f3f7ee;
+    color: #536b5b;
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .context-usage-trigger:hover {
+    color: #167243;
+    background: #eef7eb;
+    border-color: #b8d1b2;
+  }
+
+  .context-usage-trigger :deep(span) {
+    min-width: 0;
+  }
+
+  .context-usage-trigger-text {
+    position: absolute;
+    right: -4px;
+    top: -6px;
+    min-width: 22px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #5c8c64;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    box-shadow: 0 3px 8px rgba(36, 90, 45, 0.22);
+  }
+
+  .context-usage-bar {
+    width: 100%;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e7dfc9;
+  }
+
+  .context-usage-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #6f8f2f 0%, #b7ce79 100%);
+    transition: width 0.2s ease;
+  }
+
+  :deep(.context-usage-popover) {
+    padding: 12px;
+    border: 1px solid #cfe0c8;
+    border-radius: 8px;
+    background: #fffdf6;
+    box-shadow: 0 12px 32px rgba(34, 94, 58, 0.16);
+  }
+
+  .context-usage-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: #173f2a;
+  }
+
+  .context-usage-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .context-usage-detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .context-usage-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #e0eadb;
+    border-radius: 8px;
+    background: #f7fbef;
+    color: #30421f;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .context-usage-detail-row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .context-usage-detail-row span {
+    color: #6f8375;
+  }
+
+  .context-usage-detail-row strong {
+    min-width: 0;
+    color: #173f2a;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .context-usage-note,
+  .context-usage-error {
+    padding-top: 9px;
+    border-top: 1px solid #e4eee1;
+    color: #7d9184;
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .message-rich-card {
@@ -3218,9 +4193,9 @@
     flex-wrap: wrap;
     gap: 12px;
     padding: 16px;
-    background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%);
+    background: linear-gradient(135deg, #f4faf2 0%, #edf8ef 100%);
     border-radius: 16px;
-    border: 1px solid #d0e7ff;
+    border: 1px solid #cfe3ca;
   }
 
   .answer-explain-pill {
@@ -3229,26 +4204,26 @@
     min-height: 36px;
     padding: 0 16px;
     border-radius: 999px;
-    background: linear-gradient(135deg, #ffffff 0%, #f5fbff 100%);
-    border: 1px solid #b8daff;
-    color: #2563eb;
+    background: linear-gradient(135deg, #ffffff 0%, #f7faf3 100%);
+    border: 1px solid #9fca9f;
+    color: #167243;
     font-size: 13px;
     font-weight: 600;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+    box-shadow: 0 2px 8px rgba(22, 114, 67, 0.08);
     transition: all 0.3s ease;
   }
 
   .answer-explain-pill:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-    border-color: #409eff;
+    box-shadow: 0 4px 12px rgba(22, 114, 67, 0.15);
+    border-color: #167243;
   }
 
   .answer-explain-section {
-    border: 1px solid #e0ebf8;
+    border: 1px solid #d8e7d4;
     border-radius: 20px;
-    background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #fffef8 100%);
     padding: 20px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
     transition: all 0.3s ease;
@@ -3256,13 +4231,13 @@
 
   .answer-explain-section:hover {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border-color: #c9dff5;
+    border-color: #9fca9f;
   }
 
   .answer-explain-section-title {
     font-size: 16px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: #173f2a;
     margin-bottom: 16px;
     display: flex;
     align-items: center;
@@ -3274,7 +4249,7 @@
     display: inline-block;
     width: 4px;
     height: 20px;
-    background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
+    background: linear-gradient(180deg, #167243 0%, #5ca977 100%);
     border-radius: 2px;
   }
 
@@ -3287,9 +4262,9 @@
 
   .answer-explain-card,
   .answer-explain-step {
-    border: 1px solid #e8f1fa;
+    border: 1px solid #e7efe2;
     border-radius: 16px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fcff 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #f7faf3 100%);
     padding: 16px 18px;
     transition: all 0.3s ease;
     position: relative;
@@ -3304,15 +4279,15 @@
     top: 0;
     bottom: 0;
     width: 3px;
-    background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
+    background: linear-gradient(180deg, #167243 0%, #5ca977 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
 
   .answer-explain-card:hover,
   .answer-explain-step:hover {
-    border-color: #b8daff;
-    box-shadow: 0 4px 16px rgba(64, 158, 255, 0.12);
+    border-color: #9fca9f;
+    box-shadow: 0 4px 16px rgba(22, 114, 67, 0.12);
     transform: translateX(4px);
   }
 
@@ -3325,7 +4300,7 @@
   .answer-explain-step-title {
     font-weight: 700;
     font-size: 14px;
-    color: #1e3a5f;
+    color: #173f2a;
   }
 
   .answer-explain-card-meta,
@@ -3334,7 +4309,7 @@
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 8px;
-    color: #6b7f95;
+    color: #7d9184;
     font-size: 12px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
@@ -3342,7 +4317,7 @@
   .answer-explain-card-body,
   .answer-explain-step-body {
     margin-top: 12px;
-    color: #3d5a7a;
+    color: #365644;
     line-height: 1.8;
     white-space: pre-wrap;
     word-break: break-word;
@@ -3366,7 +4341,7 @@
   }
 
   .answer-explain-sql-summary {
-    color: #3d5a7a;
+    color: #365644;
     line-height: 1.9;
     white-space: pre-wrap;
     word-break: break-word;
@@ -3389,7 +4364,7 @@
   }
 
   .answer-explain-kv-row:hover {
-    background: linear-gradient(90deg, transparent 0%, #f5f9ff 100%);
+    background: linear-gradient(90deg, transparent 0%, #f4faf2 100%);
   }
 
   .answer-explain-kv-row:last-child {
@@ -3398,13 +4373,13 @@
   }
 
   .answer-explain-kv-key {
-    color: #5a7291;
+    color: #5f7467;
     font-size: 13px;
     font-weight: 600;
   }
 
   .answer-explain-kv-value {
-    color: #1e3a5f;
+    color: #173f2a;
     white-space: pre-wrap;
     word-break: break-word;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -3415,7 +4390,7 @@
   .answer-explain-inline-list {
     margin: 0;
     padding-left: 20px;
-    color: #1e3a5f;
+    color: #173f2a;
     line-height: 1.8;
   }
 
@@ -3442,7 +4417,7 @@
 
   .trace-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(22, 114, 67, 0.2);
   }
 
   /* Trace 工具栏优化 */
@@ -3453,9 +4428,9 @@
     gap: 20px;
     margin-bottom: 20px;
     padding: 16px;
-    background: linear-gradient(135deg, #f5f9ff 0%, #eef6ff 100%);
+    background: linear-gradient(135deg, #f4faf2 0%, #edf8ef 100%);
     border-radius: 16px;
-    border: 1px solid #d0e7ff;
+    border: 1px solid #cfe3ca;
   }
 
   .trace-summary {
@@ -3469,21 +4444,21 @@
     align-items: center;
     min-height: 36px;
     padding: 0 16px;
-    border: 1px solid #b8daff;
+    border: 1px solid #9fca9f;
     border-radius: 999px;
-    background: linear-gradient(135deg, #ffffff 0%, #f5fbff 100%);
-    color: #2563eb;
+    background: linear-gradient(135deg, #ffffff 0%, #f7faf3 100%);
+    color: #167243;
     font-size: 13px;
     font-weight: 600;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+    box-shadow: 0 2px 8px rgba(22, 114, 67, 0.08);
     transition: all 0.3s ease;
   }
 
   .trace-summary-pill:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-    border-color: #409eff;
+    box-shadow: 0 4px 12px rgba(22, 114, 67, 0.15);
+    border-color: #167243;
   }
 
   .trace-toolbar-actions {
@@ -3509,9 +4484,9 @@
   }
 
   .trace-pane {
-    border: 1px solid #d9e8f7;
+    border: 1px solid #d8e7d4;
     border-radius: 20px;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #f7faf3 100%);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     overflow: hidden;
     transition: all 0.3s ease;
@@ -3527,23 +4502,23 @@
     align-items: center;
     gap: 12px;
     padding: 18px 20px 14px;
-    background: linear-gradient(135deg, #f5f9ff 0%, #eef6ff 100%);
-    border-bottom: 2px solid #e0ebf8;
+    background: linear-gradient(135deg, #f4faf2 0%, #edf8ef 100%);
+    border-bottom: 2px solid #d8e7d4;
   }
 
   .trace-pane-title {
     font-size: 15px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: #173f2a;
   }
 
   .trace-pane-count {
-    color: #5a7291;
+    color: #5f7467;
     font-size: 13px;
     font-weight: 600;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     padding: 4px 12px;
-    background: rgba(64, 158, 255, 0.1);
+    background: rgba(22, 114, 67, 0.1);
     border-radius: 999px;
   }
 
@@ -3561,10 +4536,10 @@
   .trace-row {
     appearance: none;
     width: 100%;
-    border: 2px solid #e8f1fa;
+    border: 2px solid #e7efe2;
     border-radius: 16px;
     padding: 16px 18px;
-    background: linear-gradient(135deg, #ffffff 0%, #fafcff 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #fffef8 100%);
     text-align: left;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3581,7 +4556,7 @@
     top: 50%;
     width: 16px;
     height: 2px;
-    background: linear-gradient(90deg, transparent 0%, #c9dff5 100%);
+    background: linear-gradient(90deg, transparent 0%, #9fca9f 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -3594,7 +4569,7 @@
     top: 0;
     bottom: 0;
     width: 4px;
-    background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
+    background: linear-gradient(180deg, #167243 0%, #5ca977 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
     border-radius: 16px 0 0 16px;
@@ -3606,8 +4581,8 @@
   }
 
   .trace-row:hover {
-    border-color: #409eff;
-    box-shadow: 0 8px 24px rgba(64, 158, 255, 0.15);
+    border-color: #167243;
+    box-shadow: 0 8px 24px rgba(22, 114, 67, 0.15);
     transform: translateY(-2px);
     z-index: 1;
   }
@@ -3617,9 +4592,9 @@
   }
 
   .trace-row.is-selected {
-    border-color: #409eff;
-    box-shadow: 0 12px 32px rgba(64, 158, 255, 0.2);
-    background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%);
+    border-color: #167243;
+    box-shadow: 0 12px 32px rgba(22, 114, 67, 0.2);
+    background: linear-gradient(135deg, #f4faf2 0%, #edf8ef 100%);
     z-index: 2;
   }
 
@@ -3652,16 +4627,16 @@
   .trace-row-name {
     font-weight: 700;
     font-size: 14px;
-    color: #1e3a5f;
+    color: #173f2a;
   }
 
   .trace-row-duration {
-    color: #409eff;
+    color: #167243;
     font-size: 13px;
     font-weight: 700;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     padding: 2px 10px;
-    background: rgba(64, 158, 255, 0.1);
+    background: rgba(22, 114, 67, 0.1);
     border-radius: 999px;
   }
 
@@ -3670,7 +4645,7 @@
     flex-wrap: wrap;
     gap: 14px;
     margin-top: 10px;
-    color: #6b7f95;
+    color: #7d9184;
     font-size: 12px;
     word-break: break-all;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -3695,14 +4670,14 @@
     align-items: flex-start;
     gap: 20px;
     padding: 20px 22px 16px;
-    background: linear-gradient(135deg, #f5f9ff 0%, #eef6ff 100%);
-    border-bottom: 2px solid #e0ebf8;
+    background: linear-gradient(135deg, #f4faf2 0%, #edf8ef 100%);
+    border-bottom: 2px solid #d8e7d4;
   }
 
   .trace-detail-title {
     font-size: 20px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: #173f2a;
     line-height: 1.4;
   }
 
@@ -3711,7 +4686,7 @@
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 10px;
-    color: #5a7291;
+    color: #5f7467;
     font-size: 12px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
@@ -3745,7 +4720,7 @@
   }
 
   .trace-message-group {
-    border: 2px solid #e0ebf8;
+    border: 2px solid #d8e7d4;
     border-radius: 16px;
     overflow: hidden;
     background: #ffffff;
@@ -3755,7 +4730,7 @@
 
   .trace-message-group:hover {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border-color: #c9dff5;
+    border-color: #9fca9f;
   }
 
   .trace-message-group-header {
@@ -3764,23 +4739,23 @@
     align-items: center;
     gap: 14px;
     padding: 14px 16px;
-    background: linear-gradient(135deg, #f5f9ff 0%, #eef6ff 100%);
-    border-bottom: 2px solid #e0ebf8;
+    background: linear-gradient(135deg, #f4faf2 0%, #edf8ef 100%);
+    border-bottom: 2px solid #d8e7d4;
   }
 
   .trace-message-group-title {
-    color: #1e3a5f;
+    color: #173f2a;
     font-size: 14px;
     font-weight: 700;
   }
 
   .trace-message-group-meta {
-    color: #5a7291;
+    color: #5f7467;
     font-size: 12px;
     font-weight: 600;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     padding: 4px 12px;
-    background: rgba(64, 158, 255, 0.1);
+    background: rgba(22, 114, 67, 0.1);
     border-radius: 999px;
   }
 
@@ -3833,9 +4808,9 @@
   }
 
   .trace-message-item.is-user .trace-message-role-badge {
-    color: #1e40af;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    border: 1px solid #60a5fa;
+    color: #0b5f39;
+    background: linear-gradient(135deg, #edf8ef 0%, #dff1df 100%);
+    border: 1px solid #9fca9f;
   }
 
   .trace-message-item.is-assistant .trace-message-role-badge {
@@ -3865,7 +4840,7 @@
   .trace-message-body {
     padding: 16px 18px;
     border-radius: 16px;
-    border: 2px solid #e8f1fa;
+    border: 2px solid #e7efe2;
     background: #ffffff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: all 0.3s ease;
@@ -3873,12 +4848,12 @@
 
   .trace-message-body:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    border-color: #d0e7ff;
+    border-color: #cfe3ca;
   }
 
   .trace-message-item.is-user .trace-message-body {
-    background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%);
-    border-color: #b8daff;
+    background: linear-gradient(135deg, #f4faf2 0%, #edf8ef 100%);
+    border-color: #9fca9f;
   }
 
   .trace-message-item.is-assistant .trace-message-body {
@@ -3902,7 +4877,7 @@
   }
 
   .trace-message-title {
-    color: #1e3a5f;
+    color: #173f2a;
     font-size: 14px;
     font-weight: 700;
     margin-bottom: 10px;
@@ -3921,22 +4896,22 @@
     padding: 0 12px;
     min-height: 28px;
     border-radius: 999px;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    color: #1e40af;
+    background: linear-gradient(135deg, #edf8ef 0%, #dff1df 100%);
+    color: #0b5f39;
     font-size: 11px;
     font-weight: 700;
-    border: 1px solid #93c5fd;
-    box-shadow: 0 2px 6px rgba(30, 64, 175, 0.1);
+    border: 1px solid #b7ce79;
+    box-shadow: 0 2px 6px rgba(79, 111, 31, 0.1);
     transition: all 0.3s ease;
   }
 
   .trace-skill-chip:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(30, 64, 175, 0.15);
+    box-shadow: 0 4px 10px rgba(79, 111, 31, 0.15);
   }
 
   .trace-message-content {
-    color: #1e3a5f;
+    color: #173f2a;
     font-size: 13px;
     line-height: 1.8;
     white-space: pre-wrap;
@@ -3969,7 +4944,7 @@
   }
 
   .trace-attribute-table {
-    border: 2px solid #e0ebf8;
+    border: 2px solid #d8e7d4;
     border-radius: 16px;
     overflow: hidden;
     background: #ffffff;
@@ -3979,7 +4954,7 @@
 
   .trace-attribute-table:hover {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border-color: #c9dff5;
+    border-color: #9fca9f;
   }
 
   .trace-attribute-table-header,
@@ -3989,11 +4964,11 @@
   }
 
   .trace-attribute-table-header {
-    background: linear-gradient(135deg, #f5f9ff 0%, #eef6ff 100%);
-    color: #1e3a5f;
+    background: linear-gradient(135deg, #f4faf2 0%, #edf8ef 100%);
+    color: #173f2a;
     font-size: 13px;
     font-weight: 700;
-    border-bottom: 2px solid #e0ebf8;
+    border-bottom: 2px solid #d8e7d4;
   }
 
   .trace-attribute-table-header span,
@@ -4011,21 +4986,21 @@
   }
 
   .trace-attribute-row:hover {
-    background: linear-gradient(90deg, #f8fcff 0%, #f0f7ff 100%);
+    background: linear-gradient(90deg, #f7faf3 0%, #f4faf2 100%);
   }
 
   .trace-attribute-key {
-    color: #1e3a5f;
+    color: #173f2a;
     font-size: 13px;
     font-weight: 600;
     word-break: break-all;
-    background: linear-gradient(135deg, #fafcff 0%, #f5f9ff 100%);
-    border-right: 2px solid #e0ebf8;
+    background: linear-gradient(135deg, #fffef8 0%, #f4faf2 100%);
+    border-right: 2px solid #d8e7d4;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
 
   .trace-attribute-value {
-    color: #3d5a7a;
+    color: #365644;
     font-size: 13px;
     line-height: 1.8;
     word-break: break-word;
@@ -4064,6 +5039,11 @@
 
     .input-container {
       flex-direction: column;
+      align-items: stretch;
+    }
+
+    .input-toolbar {
+      flex-wrap: nowrap;
     }
 
     .trace-toolbar {
@@ -4120,7 +5100,7 @@
 
     .trace-attribute-key {
       border-right: none;
-      border-bottom: 1px solid #e0ebf8;
+      border-bottom: 1px solid #d8e7d4;
     }
 
     .answer-explain-summary {
@@ -4193,7 +5173,7 @@
 
   .result-set-pagination-btn:hover:not(:disabled) {
     background: #f5f7fa;
-    border-color: #c6e2ff;
+    border-color: #9fca9f;
   }
 
   .result-set-pagination-btn:disabled {
@@ -4270,6 +5250,156 @@
 
   .result-set-message {
     width: 100%;
+  }
+
+  .agent-thinking-block {
+    background: #fbfdfb;
+  }
+
+  .agent-thinking-group {
+    border-color: #e2ebe0;
+    box-shadow: none;
+  }
+
+  .agent-thinking-group:hover {
+    border-color: #d7e4d4;
+    box-shadow: none;
+  }
+
+  .agent-thinking-group .agent-response-title {
+    background: #f7faf7;
+    color: #6f8a75;
+    border-bottom-color: #e2ebe0;
+  }
+
+  .agent-response-summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .agent-response-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .agent-response-summary::before {
+    content: '>';
+    flex: 0 0 auto;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+  }
+
+  .agent-thinking-block[open] .agent-response-summary::before {
+    transform: rotate(90deg);
+  }
+
+  .agent-response-title-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-response-summary-hint {
+    flex: 0 0 auto;
+    color: #8a938d;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .agent-thinking-block[open] .agent-response-summary-hint {
+    font-size: 0;
+  }
+
+  .agent-thinking-block[open] .agent-response-summary-hint::after {
+    content: '收起';
+    font-size: 12px;
+  }
+
+  .agent-thinking-count {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 2px 8px;
+    border: 1px solid #e0eadf;
+    border-radius: 999px;
+    color: #7a947f;
+    background: #fbfdfb;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .agent-thinking-content {
+    padding: 0;
+    white-space: normal;
+    font-family: inherit;
+  }
+
+  .agent-thinking-steps {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .agent-thinking-step {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .agent-thinking-step + .agent-thinking-step {
+    border-top: 1px solid #edf3ec;
+  }
+
+  .agent-thinking-step-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #dce8da;
+    border-radius: 50%;
+    color: #7b977f;
+    background: #fbfdfb;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .agent-thinking-step-body {
+    min-width: 0;
+  }
+
+  .agent-thinking-step-title {
+    margin-bottom: 8px;
+    color: #6c856f;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .agent-thinking-step-content {
+    color: #6e7f72;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .agent-thinking-step-content pre {
+    margin: 6px 0 0;
+  }
+
+  .agent-final-answer-content {
+    color: #183627;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
 
   /* 响应式设计 */

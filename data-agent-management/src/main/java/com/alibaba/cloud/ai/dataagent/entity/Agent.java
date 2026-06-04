@@ -52,7 +52,7 @@ public class Agent {
 	private String apiKey; // API Key for external access, format sk-xxx
 
 	@Builder.Default
-	private Integer apiKeyEnabled = 0; // 0/1 toggle for API access
+	private Boolean apiKeyEnabled = false; // Toggle for API access
 
 	private String prompt; // Custom Prompt configuration
 

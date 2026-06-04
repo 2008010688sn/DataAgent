@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Prepare WSL PostgreSQL" type="PowerShellRunType" factoryName="PowerShell" singleton="true">
+    <option name="SCRIPT_PATH" value="$PROJECT_DIR$/scripts/prepare-wsl-postgres.ps1" />
+    <option name="SCRIPT_OPTIONS" value="-WslDistro Ubuntu-24.04" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2" />
+  </configuration>
+</component>

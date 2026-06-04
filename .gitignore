@@ -66,3 +66,7 @@ data-agent-management/vectorstore/*
 spring-ai-alibaba-1.1.0.0/
 .spec-workflow
 .claude
+
+# Local Higress AI Gateway runtime config may contain provider API keys.
+.local/higress/data/
+.local/higress/get-ai-gateway.sh

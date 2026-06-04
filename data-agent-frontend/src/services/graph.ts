@@ -18,6 +18,7 @@ export interface AgentRequest {
   agentId: string;
   threadId?: string;
   runtimeRequestId?: string;
+  chatModelConfigId?: number;
   query: string;
   clarifyCheckEnabled?: boolean;
   humanFeedback?: boolean;
@@ -81,6 +82,9 @@ class GraphService {
     }
     if (request.runtimeRequestId) {
       params.append('runtimeRequestId', request.runtimeRequestId);
+    }
+    if (request.chatModelConfigId) {
+      params.append('chatModelConfigId', String(request.chatModelConfigId));
     }
     params.append('query', request.query);
     params.append('clarifyCheckEnabled', String(Boolean(request.clarifyCheckEnabled)));

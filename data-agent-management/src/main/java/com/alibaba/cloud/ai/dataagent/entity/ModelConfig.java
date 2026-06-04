@@ -42,6 +42,8 @@ public class ModelConfig {
 
 	private Integer maxTokens;
 
+	private Integer contextWindowTokens;
+
 	// 模型类型
 	// 可选值："CHAT", "EMBEDDING"
 	private ModelType modelType;
@@ -57,7 +59,7 @@ public class ModelConfig {
 	private LocalDateTime updatedTime;
 
 	// 0=未删除, 1=已删除
-	private Integer isDeleted;
+	private Boolean isDeleted;
 
 	// ai-proxy设置（默认关闭，使用直连）
 	private Boolean proxyEnabled;

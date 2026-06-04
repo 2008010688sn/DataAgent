@@ -28,7 +28,7 @@ public interface AgentDatasourceService {
 
 	default AgentDatasource getCurrentAgentDatasource(Long agentId) {
 		return getAgentDatasource(agentId).stream()
-			.filter(a -> a.getIsActive() != 0)
+			.filter(a -> Boolean.TRUE.equals(a.getIsActive()))
 			.findFirst()
 			.orElseThrow(() -> new IllegalStateException("Agent " + agentId + " has no active datasource"));
 	}

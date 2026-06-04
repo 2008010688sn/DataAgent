@@ -148,8 +148,8 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 		}
 
 		// 同步执行软删除
-		knowledge.setIsDeleted(1);
-		knowledge.setIsResourceCleaned(0);
+		knowledge.setIsDeleted(true);
+		knowledge.setIsResourceCleaned(false);
 		knowledge.setUpdatedTime(LocalDateTime.now());
 
 		if (agentKnowledgeMapper.update(knowledge) > 0) {
@@ -187,7 +187,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 		}
 
 		// 更新召回状态
-		knowledge.setIsRecall(recalled ? 1 : 0);
+		knowledge.setIsRecall(Boolean.TRUE.equals(recalled));
 
 		// 更新数据库
 		boolean res = agentKnowledgeMapper.update(knowledge) > 0;
@@ -207,7 +207,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 		}
 
 		// 非召回的不处理
-		if (knowledge.getIsRecall() == null || knowledge.getIsRecall() == 0) {
+		if (!Boolean.TRUE.equals(knowledge.getIsRecall())) {
 			throw new RuntimeException("BusinessKnowledge is not recalled, please recall it first.");
 		}
 

@@ -1,0 +1,67 @@
+# Local development stack for feat-agentscope (WSL / native Docker).
+# - mysql-management: DataAgent business DB (saa_data_agent)
+# - mysql-data / postgres-data: mock analytics datasources
+#
+# Note: default postgres port is 25432 to avoid conflict with Langfuse on 15432.
+
+services:
+  mysql-management:
+    image: mysql:8.0
+    container_name: data-agent-mysql-management
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: saa_data_agent
+    volumes:
+      - ./config/mysql/00-charset.sql:/docker-entrypoint-initdb.d/00-charset.sql:ro
+      - ../data-agent-management/src/main/resources/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../data-agent-management/src/main/resources/sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mysql-data:
+    image: mysql:8.0
+    container_name: data-agent-mysql-datasource
+    restart: unless-stopped
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./config/mysql:/docker-entrypoint-initdb.d:ro
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  postgres-data:
+    image: postgres:15
+    container_name: data-agent-postgres-datasource
+    restart: unless-stopped
+    ports:
+      - "25432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./config/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+networks:
+  default:
+    name: data-agent-local-dev

@@ -29,6 +29,8 @@ public interface ModelConfigDataService {
 
 	List<ModelConfigDTO> listConfigs();
 
+	ModelConfigDTO getConfigById(Integer id, ModelType modelType);
+
 	void addConfig(ModelConfigDTO dto);
 
 	ModelConfig updateConfigInDb(ModelConfigDTO dto);

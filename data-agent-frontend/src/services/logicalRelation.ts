@@ -27,7 +27,7 @@ export interface LogicalRelation {
   targetColumnName: string;
   relationType?: string; // 1:1, 1:N, N:1
   description?: string;
-  isDeleted?: number;
+  isDeleted?: boolean;
   createdTime?: string;
   updatedTime?: string;
 }

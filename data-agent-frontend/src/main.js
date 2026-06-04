@@ -15,6 +15,7 @@
  */
 import { createApp } from 'vue';
 import App from '@/App.vue';
+import '@/services/http';
 import router from '@/router';
 
 // 引入全局样式

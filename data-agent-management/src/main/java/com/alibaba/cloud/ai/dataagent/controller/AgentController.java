@@ -159,7 +159,7 @@ public class AgentController {
 		return agent;
 	}
 
-	private ApiResponse<ApiKeyResponse> buildApiKeyResponse(String apiKey, Integer apiKeyEnabled, String message) {
+	private ApiResponse<ApiKeyResponse> buildApiKeyResponse(String apiKey, Boolean apiKeyEnabled, String message) {
 		return ApiResponse.success(message, new ApiKeyResponse(apiKey, apiKeyEnabled));
 	}
 

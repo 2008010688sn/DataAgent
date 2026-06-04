@@ -1,5 +1,6 @@
 server:
   port: 8065
+  address: ${SERVER_ADDRESS:0.0.0.0}
 
 springdoc:
   api-docs:
@@ -9,23 +10,43 @@ springdoc:
 
 # 存储 DataAgent 业务数据的数据库，并非Agent分析数据的来源
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
   datasource:
-    url: ${DATA_AGENT_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/saa_data_agent?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai}
-    username: ${DATA_AGENT_DATASOURCE_USERNAME:root}
-    password: ${DATA_AGENT_DATASOURCE_PASSWORD:root}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DATA_AGENT_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5433/saa_data_agent}
+    username: ${DATA_AGENT_DATASOURCE_USERNAME:postgres}
+    password: ${DATA_AGENT_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
     type: com.alibaba.druid.pool.DruidDataSource
+    validation-query: SELECT 1
+    test-while-idle: true
+    test-on-borrow: true
+    test-on-return: false
+    keep-alive: true
+    min-evictable-idle-time-millis: 60000
+    time-between-eviction-runs-millis: 30000
   sql:
     init:
       mode: ${DATA_AGENT_DATASOURCE_SQL_INIT:never}
-      schema-locations: classpath:sql/schema.sql
-      data-locations: classpath:sql/data.sql
+      schema-locations: classpath:sql/pg/schema.sql
+      data-locations: classpath:sql/pg/data.sql
       continue-on-error: true
       separator: ;
       encoding: utf-8
   ai:
     vectorstore:
-      type: simple
+      type: ${DATA_AGENT_VECTORSTORE_TYPE:pgvector}
+      pgvector:
+        initialize-schema: ${DATA_AGENT_PGVECTOR_INITIALIZE_SCHEMA:false}
+        schema-name: ${DATA_AGENT_PGVECTOR_SCHEMA:public}
+        table-name: ${DATA_AGENT_PGVECTOR_TABLE:vector_store}
+        dimensions: ${DATA_AGENT_PGVECTOR_DIMENSIONS:1024}
+        index-type: ${DATA_AGENT_PGVECTOR_INDEX_TYPE:HNSW}
+        distance-type: ${DATA_AGENT_PGVECTOR_DISTANCE_TYPE:COSINE_DISTANCE}
+        remove-existing-vector-store-table: ${DATA_AGENT_PGVECTOR_REMOVE_EXISTING_TABLE:false}
+        schema-validation: ${DATA_AGENT_PGVECTOR_SCHEMA_VALIDATION:true}
     alibaba:
       data-agent:
         vector-store:

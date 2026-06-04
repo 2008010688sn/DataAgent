@@ -22,7 +22,7 @@ interface BusinessKnowledgeVO {
   businessTerm: string;
   description: string;
   synonyms: string;
-  isRecall: boolean; // 0 or 1
+  isRecall: boolean;
   agentId: number;
   createdTime?: string;
   updatedTime?: string;
@@ -34,7 +34,7 @@ interface CreateBusinessKnowledgeDTO {
   businessTerm: string;
   description: string;
   synonyms: string;
-  isRecall: boolean; // 0 or 1
+  isRecall: boolean;
   agentId: number;
 }
 

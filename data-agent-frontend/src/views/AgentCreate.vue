@@ -322,7 +322,7 @@
             tags: agentForm.tags.trim(),
             prompt: agentForm.prompt.trim(),
             status: agentForm.status,
-            humanReviewEnabled: agentForm.humanReviewEnabled ? 1 : 0,
+            humanReviewEnabled: agentForm.humanReviewEnabled === true,
           };
 
           const result = await agentService.create(agentData);

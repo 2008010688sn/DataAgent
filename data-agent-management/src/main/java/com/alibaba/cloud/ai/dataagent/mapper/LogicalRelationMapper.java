@@ -29,21 +29,21 @@ public interface LogicalRelationMapper {
 	/**
 	 * 根据ID查询逻辑外键
 	 */
-	@Select("SELECT * FROM logical_relation WHERE id = #{id} AND is_deleted = 0")
+	@Select("SELECT * FROM logical_relation WHERE id = #{id} AND is_deleted = false")
 	LogicalRelation selectById(@Param("id") Integer id);
 
 	@Select("""
 			SELECT * FROM logical_relation
 			WHERE id = #{id}
 			  AND datasource_id = #{datasourceId}
-			  AND is_deleted = 0
+			  AND is_deleted = false
 			""")
 	LogicalRelation selectByIdAndDatasourceId(@Param("id") Integer id, @Param("datasourceId") Integer datasourceId);
 
 	/**
 	 * 根据数据源ID查询逻辑外键列表（未删除的）
 	 */
-	@Select("SELECT * FROM logical_relation WHERE datasource_id = #{datasourceId} AND is_deleted = 0 ORDER BY created_time DESC")
+	@Select("SELECT * FROM logical_relation WHERE datasource_id = #{datasourceId} AND is_deleted = false ORDER BY created_time DESC")
 	List<LogicalRelation> selectByDatasourceId(@Param("datasourceId") Integer datasourceId);
 
 	/**
@@ -54,7 +54,7 @@ public interface LogicalRelationMapper {
 			    (datasource_id, source_table_name, source_column_name, target_table_name, target_column_name,
 			     relation_type, description, is_deleted, created_time, updated_time)
 			VALUES (#{datasourceId}, #{sourceTableName}, #{sourceColumnName}, #{targetTableName}, #{targetColumnName},
-			        #{relationType}, #{description}, 0, NOW(), NOW())
+			        #{relationType}, #{description}, false, NOW(), NOW())
 			""")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
 	int insert(LogicalRelation logicalRelation);
@@ -93,7 +93,7 @@ public interface LogicalRelationMapper {
 			</set>
 			WHERE id = #{logicalRelation.id}
 			  AND datasource_id = #{datasourceId}
-			  AND is_deleted = 0
+			  AND is_deleted = false
 			</script>
 			""")
 	int updateByIdAndDatasourceId(@Param("datasourceId") Integer datasourceId,
@@ -102,15 +102,15 @@ public interface LogicalRelationMapper {
 	/**
 	 * 逻辑删除外键
 	 */
-	@Update("UPDATE logical_relation SET is_deleted = 1, updated_time = NOW() WHERE id = #{id}")
+	@Update("UPDATE logical_relation SET is_deleted = true, updated_time = NOW() WHERE id = #{id}")
 	int deleteById(@Param("id") Integer id);
 
 	@Update("""
 			UPDATE logical_relation
-			SET is_deleted = 1, updated_time = NOW()
+			SET is_deleted = true, updated_time = NOW()
 			WHERE id = #{id}
 			  AND datasource_id = #{datasourceId}
-			  AND is_deleted = 0
+			  AND is_deleted = false
 			""")
 	int deleteByIdAndDatasourceId(@Param("id") Integer id, @Param("datasourceId") Integer datasourceId);
 
@@ -127,7 +127,7 @@ public interface LogicalRelationMapper {
 	/**
 	 * 逻辑删除数据源下的所有逻辑外键
 	 */
-	@Update("UPDATE logical_relation SET is_deleted = 1, updated_time = NOW() WHERE datasource_id = #{datasourceId}")
+	@Update("UPDATE logical_relation SET is_deleted = true, updated_time = NOW() WHERE datasource_id = #{datasourceId}")
 	int deleteByDatasourceId(@Param("datasourceId") Integer datasourceId);
 
 	/**
@@ -140,7 +140,7 @@ public interface LogicalRelationMapper {
 			  AND source_column_name = #{sourceColumnName}
 			  AND target_table_name = #{targetTableName}
 			  AND target_column_name = #{targetColumnName}
-			  AND is_deleted = 0
+			  AND is_deleted = false
 			""")
 	int checkExists(@Param("datasourceId") Integer datasourceId, @Param("sourceTableName") String sourceTableName,
 			@Param("sourceColumnName") String sourceColumnName, @Param("targetTableName") String targetTableName,
@@ -153,7 +153,7 @@ public interface LogicalRelationMapper {
 			  AND source_column_name = #{sourceColumnName}
 			  AND target_table_name = #{targetTableName}
 			  AND target_column_name = #{targetColumnName}
-			  AND is_deleted = 0
+			  AND is_deleted = false
 			  AND id != #{excludeId}
 			""")
 	int checkExistsExcludingId(@Param("datasourceId") Integer datasourceId,
@@ -168,7 +168,7 @@ public interface LogicalRelationMapper {
 			  AND source_column_name = #{sourceColumnName}
 			  AND target_table_name = #{targetTableName}
 			  AND target_column_name = #{targetColumnName}
-			  AND is_deleted = 1
+			  AND is_deleted = true
 			ORDER BY updated_time DESC, id DESC
 			""")
 	List<LogicalRelation> selectDeletedByBusinessKey(@Param("datasourceId") Integer datasourceId,

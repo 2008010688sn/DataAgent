@@ -219,10 +219,10 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 				continue;
 			}
 			BusinessKnowledge knowledge = businessKnowledgeMapper.selectById(knowledgeId);
-			if (knowledge == null || knowledge.getIsDeleted() != null && knowledge.getIsDeleted() == 1) {
+			if (knowledge == null || Boolean.TRUE.equals(knowledge.getIsDeleted())) {
 				continue;
 			}
-			if (knowledge.getIsRecall() == null || knowledge.getIsRecall() != 1) {
+			if (!Boolean.TRUE.equals(knowledge.getIsRecall())) {
 				continue;
 			}
 			hits.add(new KnowledgeHit("businessKnowledge", String.valueOf(knowledgeId), knowledge.getBusinessTerm(),
@@ -244,7 +244,7 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 				continue;
 			}
 			AgentKnowledge knowledge = agentKnowledgeMapper.selectById(knowledgeId);
-			if (knowledge == null || knowledge.getIsDeleted() != null && knowledge.getIsDeleted() == 1) {
+			if (knowledge == null || Boolean.TRUE.equals(knowledge.getIsDeleted())) {
 				continue;
 			}
 			if (filterByConcreteType && !allowedTypes.contains(knowledge.getType())) {

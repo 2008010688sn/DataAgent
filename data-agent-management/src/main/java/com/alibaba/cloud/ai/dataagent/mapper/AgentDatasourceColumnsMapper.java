@@ -40,9 +40,10 @@ public interface AgentDatasourceColumnsMapper {
 			@Param("tables") List<String> tables);
 
 	@Insert("<script>"
-			+ "INSERT IGNORE INTO agent_datasource_columns (agent_datasource_id, table_name, column_name) VALUES "
+			+ "INSERT INTO agent_datasource_columns (agent_datasource_id, table_name, column_name) VALUES "
 			+ "<foreach collection='rows' item='row' separator=','>"
-			+ "(#{row.agentDatasourceId}, #{row.tableName}, #{row.columnName})" + "</foreach>" + "</script>")
+			+ "(#{row.agentDatasourceId}, #{row.tableName}, #{row.columnName})" + "</foreach>"
+			+ " ON CONFLICT (agent_datasource_id, table_name, column_name) DO NOTHING" + "</script>")
 	int insertColumns(@Param("rows") List<AgentDatasourceColumn> rows);
 
 }

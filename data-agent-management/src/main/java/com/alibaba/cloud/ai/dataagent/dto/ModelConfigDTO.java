@@ -56,6 +56,8 @@ public class ModelConfigDTO {
 
 	private Integer maxTokens = 2000;
 
+	private Integer contextWindowTokens = 32768;
+
 	private Boolean isActive = true;
 
 	// 模型代理配置，默认关闭（使用直连）

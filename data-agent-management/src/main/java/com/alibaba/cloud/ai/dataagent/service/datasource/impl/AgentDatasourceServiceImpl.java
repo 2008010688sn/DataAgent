@@ -143,7 +143,7 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 		if (agentDatasource == null) {
 			throw new RuntimeException("未找到相关的数据源关联记录");
 		}
-		if (agentDatasource.getIsActive() != null && agentDatasource.getIsActive() == 1) {
+		if (Boolean.TRUE.equals(agentDatasource.getIsActive())) {
 			int activeCount = agentDatasourceMapper.countActiveByAgentId(agentId);
 			if (activeCount <= 1) {
 				throw new RuntimeException("当前智能体必须至少保留一个启用中的数据源");
@@ -166,7 +166,7 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 				throw new RuntimeException("同一智能体下只能启用一个数据源，请先禁用其他数据源后再启用此数据源");
 			}
 		}
-		else if (existingRelation.getIsActive() != null && existingRelation.getIsActive() == 1) {
+		else if (Boolean.TRUE.equals(existingRelation.getIsActive())) {
 			int activeCount = agentDatasourceMapper.countActiveByAgentId(agentId);
 			if (activeCount <= 1) {
 				throw new RuntimeException("当前智能体必须至少保留一个启用中的数据源");
@@ -174,7 +174,7 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 		}
 
 		// Update data source status
-		int updated = agentDatasourceMapper.updateRelation(agentId, datasourceId, isActive ? 1 : 0);
+		int updated = agentDatasourceMapper.updateRelation(agentId, datasourceId, isActive);
 
 		if (updated == 0) {
 			throw new RuntimeException("未找到相关的数据源关联记录");

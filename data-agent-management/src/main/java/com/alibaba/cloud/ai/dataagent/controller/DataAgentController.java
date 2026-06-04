@@ -20,9 +20,10 @@ import com.alibaba.cloud.ai.dataagent.agentscope.service.AgentService;
 import com.alibaba.cloud.ai.dataagent.agentscope.vo.AgentResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,7 +33,6 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 import com.alibaba.cloud.ai.dataagent.service.chat.ChatSessionService;
-import org.springframework.http.HttpStatus;
 
 import static com.alibaba.cloud.ai.dataagent.constant.Constant.STREAM_EVENT_COMPLETE;
 import static com.alibaba.cloud.ai.dataagent.constant.Constant.STREAM_EVENT_ERROR;
@@ -49,19 +49,16 @@ public class DataAgentController {
 	private final ChatSessionService chatSessionService;
 
 	@GetMapping(value = "/stream/search", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-	public Flux<ServerSentEvent<AgentResponse>> streamSearch(@RequestParam("agentId") String agentId,
+	public ResponseEntity<Flux<ServerSentEvent<AgentResponse>>> streamSearch(@RequestParam("agentId") String agentId,
 			@RequestParam("threadId") String threadId,
 			@RequestParam(value = "runtimeRequestId", required = false) String runtimeRequestId,
 			@RequestParam("query") String query,
 			@RequestParam(value = "clarifyCheckEnabled", required = false) boolean clarifyCheckEnabled,
 			@RequestParam(value = "humanFeedback", required = false) boolean humanFeedback,
 			@RequestParam(value = "humanFeedbackContent", required = false) String humanFeedbackContent,
-			@RequestParam(value = "rejectedPlan", required = false) boolean rejectedPlan, ServerHttpResponse response) {
+			@RequestParam(value = "rejectedPlan", required = false) boolean rejectedPlan) {
 		Long numericAgentId = parseAgentId(agentId);
 		chatSessionService.requireSessionForAgent(threadId, numericAgentId);
-		response.getHeaders().add("Cache-Control", "no-cache");
-		response.getHeaders().add("Connection", "keep-alive");
-		response.getHeaders().add("Access-Control-Allow-Origin", "*");
 
 		Sinks.Many<ServerSentEvent<AgentResponse>> sink = Sinks.many().unicast().onBackpressureBuffer();
 		AgentRequest request = AgentRequest.builder()
@@ -76,7 +73,7 @@ public class DataAgentController {
 			.build();
 		agentService.graphStreamProcess(sink, request);
 
-		return sink.asFlux().filter(sse -> {
+		Flux<ServerSentEvent<AgentResponse>> stream = sink.asFlux().filter(sse -> {
 			if (STREAM_EVENT_COMPLETE.equals(sse.event()) || STREAM_EVENT_ERROR.equals(sse.event())) {
 				return true;
 			}
@@ -97,6 +94,12 @@ public class DataAgentController {
 				}
 			})
 			.doOnComplete(() -> log.info("Aiagent stream completed successfully, threadId: {}", request.getThreadId()));
+		return ResponseEntity.ok()
+			.contentType(MediaType.TEXT_EVENT_STREAM)
+			.header("Cache-Control", "no-cache")
+			.header("Connection", "keep-alive")
+			.header("Access-Control-Allow-Origin", "*")
+			.body(stream);
 	}
 
 	private Long parseAgentId(String agentId) {

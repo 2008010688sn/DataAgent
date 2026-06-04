@@ -16,18 +16,25 @@
 package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.dto.ChatMessageDTO;
+import com.alibaba.cloud.ai.dataagent.dto.ModelConfigDTO;
 import com.alibaba.cloud.ai.dataagent.entity.ChatMessage;
 import com.alibaba.cloud.ai.dataagent.entity.ChatSession;
+import com.alibaba.cloud.ai.dataagent.enums.ModelType;
 import com.alibaba.cloud.ai.dataagent.exception.InvalidInputException;
 import com.alibaba.cloud.ai.dataagent.observability.AnswerTraceExplainStore;
 import com.alibaba.cloud.ai.dataagent.observability.SessionTraceStore;
+import com.alibaba.cloud.ai.dataagent.service.aimodelconfig.ModelConfigDataService;
 import com.alibaba.cloud.ai.dataagent.service.chat.ChatMessageService;
 import com.alibaba.cloud.ai.dataagent.service.chat.ChatSessionService;
 import com.alibaba.cloud.ai.dataagent.service.chat.SessionTitleService;
 import com.alibaba.cloud.ai.dataagent.util.ReportTemplateUtil;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
+import com.alibaba.cloud.ai.dataagent.vo.SessionContextUsageVO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.knuddels.jtokkit.Encodings;
+import com.knuddels.jtokkit.api.Encoding;
+import com.knuddels.jtokkit.api.EncodingType;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -55,9 +62,16 @@ public class ChatController {
 
 	private static final String ANSWER_EXPLAIN_MESSAGE_TYPE = "answer-explain";
 
+	private static final long DEFAULT_CONTEXT_WINDOW_TOKENS = 32768L;
+
+	private static final Encoding TOKEN_ENCODING = Encodings.newDefaultEncodingRegistry()
+		.getEncoding(EncodingType.CL100K_BASE);
+
 	private final ChatSessionService chatSessionService;
 
 	private final ChatMessageService chatMessageService;
+
+	private final ModelConfigDataService modelConfigDataService;
 
 	private final SessionTitleService sessionTitleService;
 
@@ -130,6 +144,27 @@ public class ChatController {
 			@RequestParam(value = "agentId") Long agentId) {
 		List<ChatMessage> messages = chatMessageService.findVisibleBySessionId(sessionId, agentId);
 		return ResponseEntity.ok(messages);
+	}
+
+	@GetMapping("/sessions/{sessionId}/context")
+	public ResponseEntity<SessionContextUsageVO> getSessionContextUsage(
+			@PathVariable(value = "sessionId") String sessionId, @RequestParam(value = "agentId") Long agentId,
+			@RequestParam(value = "chatModelConfigId", required = false) Integer chatModelConfigId) {
+		chatSessionService.requireSessionForAgent(sessionId, agentId);
+		List<ChatMessage> messages = chatMessageService.findVisibleBySessionId(sessionId, agentId);
+		ModelConfigDTO modelConfig = resolveChatModelConfig(chatModelConfigId);
+		long usedTokens = messages.stream().mapToLong(this::countMessageTokens).sum();
+		long limitTokens = resolveContextWindowTokens(modelConfig);
+		double usageRatio = limitTokens > 0 ? Math.min(1D, usedTokens / (double) limitTokens) : 0D;
+		return ResponseEntity.ok(SessionContextUsageVO.builder()
+			.usedTokens(usedTokens)
+			.limitTokens(limitTokens)
+			.usageRatio(usageRatio)
+			.messageCount(messages.size())
+			.estimated(true)
+			.modelName(modelConfig == null ? null : modelConfig.getModelName())
+			.chatModelConfigId(modelConfig == null ? null : modelConfig.getId())
+			.build());
 	}
 
 	@GetMapping("/sessions/{sessionId}/trace")
@@ -210,6 +245,45 @@ public class ChatController {
 			}
 		}
 		return java.util.Optional.empty();
+	}
+
+	private ModelConfigDTO resolveChatModelConfig(Integer chatModelConfigId) {
+		if (chatModelConfigId != null) {
+			return modelConfigDataService.getConfigById(chatModelConfigId, ModelType.CHAT);
+		}
+		return modelConfigDataService.getActiveConfigByType(ModelType.CHAT);
+	}
+
+	private long resolveContextWindowTokens(ModelConfigDTO modelConfig) {
+		if (modelConfig == null || modelConfig.getContextWindowTokens() == null
+				|| modelConfig.getContextWindowTokens() <= 0) {
+			return DEFAULT_CONTEXT_WINDOW_TOKENS;
+		}
+		return modelConfig.getContextWindowTokens();
+	}
+
+	private long countMessageTokens(ChatMessage message) {
+		if (message == null) {
+			return 0L;
+		}
+		StringBuilder tokenText = new StringBuilder();
+		appendTokenText(tokenText, message.getRole());
+		appendTokenText(tokenText, message.getMessageType());
+		appendTokenText(tokenText, message.getContent());
+		if (tokenText.length() == 0) {
+			return 0L;
+		}
+		return TOKEN_ENCODING.countTokens(tokenText.toString());
+	}
+
+	private void appendTokenText(StringBuilder builder, String value) {
+		if (!StringUtils.hasText(value)) {
+			return;
+		}
+		if (builder.length() > 0) {
+			builder.append('\n');
+		}
+		builder.append(value);
 	}
 
 	/**

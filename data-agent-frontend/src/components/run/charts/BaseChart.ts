@@ -27,28 +27,28 @@ export interface ChartData {
 export type ChartTypes = 'table' | 'bar' | 'column' | 'line' | 'pie';
 
 // 基础颜色面板，作为扩展颜色数组的前6个色值
-export const COLOR_PANEL = ['#5584FF', '#36CBCB', '#4ECB74', '#FAD337', '#F2637B', '#975FEE'];
+export const COLOR_PANEL = ['#167243', '#7b9f42', '#2f7d60', '#c7a64a', '#8f6b38', '#5ca977'];
 
 // 扩展颜色数组，包含基础颜色面板、ECharts默认颜色和额外颜色
 export const EXTENDED_COLORS = [
   // 基础颜色面板作为前6个色值
   ...COLOR_PANEL,
   // ECharts默认颜色（不包括与COLOR_PANEL重复的部分）
-  '#5470c6',
+  '#0b5f39',
   '#91cc75',
   '#fac858',
   '#ee6666',
-  '#73c0de',
+  '#86b07a',
   '#3ba272',
   '#fc8452',
-  '#9a60b4',
-  '#ea7ccc',
+  '#6f9338',
+  '#b18c42',
   // 额外补充颜色
-  '#0082fc',
+  '#4f8b58',
   '#fdd845',
   '#22ed7c',
-  '#1d27c9',
-  '#05f8d6',
+  '#365644',
+  '#9fca9f',
   '#f9e264',
   '#f47a75',
   '#009db2',

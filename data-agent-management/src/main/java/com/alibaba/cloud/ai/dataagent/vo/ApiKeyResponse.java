@@ -29,6 +29,6 @@ public class ApiKeyResponse {
 
 	private String apiKey;
 
-	private Integer apiKeyEnabled;
+	private Boolean apiKeyEnabled;
 
 }

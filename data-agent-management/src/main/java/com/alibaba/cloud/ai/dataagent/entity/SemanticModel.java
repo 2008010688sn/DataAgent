@@ -84,7 +84,7 @@ public class SemanticModel {
 	/**
 	 * 状态: 0 停用 1 启用
 	 */
-	private Integer status;
+	private Boolean status;
 
 	/**
 	 * 创建时间
@@ -96,7 +96,7 @@ public class SemanticModel {
 	 * 更新时间
 	 */
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-	private LocalDateTime updateTime;
+	private LocalDateTime updatedTime;
 
 	/**
 	 * 获取用于提示的信息

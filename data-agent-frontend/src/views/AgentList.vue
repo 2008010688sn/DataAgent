@@ -387,7 +387,7 @@
   .stat-number {
     font-size: 2rem;
     font-weight: 700;
-    color: #3b82f6;
+    color: #167243;
     line-height: 1;
   }
 

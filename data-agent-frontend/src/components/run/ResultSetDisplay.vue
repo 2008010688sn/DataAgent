@@ -257,8 +257,8 @@
   }
 
   .view-active {
-    background-color: #ecf5ff;
-    color: #409eff;
+    background-color: #edf8ef;
+    color: #167243;
   }
 
   /* 显示区域样式 */

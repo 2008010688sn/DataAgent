@@ -121,6 +121,15 @@ public class DatasourceServiceImpl implements DatasourceService {
 	@Override
 	public Datasource updateDatasource(Integer id, Datasource datasource) {
 		Datasource existingDatasource = datasourceMapper.selectById(id);
+		if (existingDatasource == null) {
+			throw new IllegalArgumentException("Datasource not found with id: " + id);
+		}
+		if (datasource.getType() == null) {
+			datasource.setType(existingDatasource.getType());
+		}
+		if (StringUtils.isBlank(datasource.getPassword())) {
+			datasource.setPassword(existingDatasource.getPassword());
+		}
 		// Regenerate connection URL
 		DatasourceTypeHandler handler = datasourceTypeHandlerRegistry.getRequired(datasource.getType());
 		String connectionUrl = handler.resolveConnectionUrl(datasource);
@@ -128,10 +137,6 @@ public class DatasourceServiceImpl implements DatasourceService {
 			datasource.setConnectionUrl(connectionUrl);
 		}
 		datasource.setId(id);
-
-		if (datasource.getPassword() == null) {
-			datasource.setPassword("");
-		}
 
 		if (datasource.getUsername() == null) {
 			datasource.setUsername("");
@@ -151,7 +156,7 @@ public class DatasourceServiceImpl implements DatasourceService {
 			if (agentDatasource == null || agentDatasource.getAgentId() == null) {
 				continue;
 			}
-			if (agentDatasource.getIsActive() != null && agentDatasource.getIsActive() == 1) {
+			if (Boolean.TRUE.equals(agentDatasource.getIsActive())) {
 				int activeCount = agentDatasourceMapper.countActiveByAgentId(agentDatasource.getAgentId());
 				if (activeCount <= 1) {
 					throw new RuntimeException("当前智能体必须至少保留一个启用中的数据源");

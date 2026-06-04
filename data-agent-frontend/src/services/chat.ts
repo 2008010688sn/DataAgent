@@ -39,6 +39,16 @@ export interface ChatMessage {
   titleNeeded?: boolean;
 }
 
+export interface SessionContextUsage {
+  usedTokens: number;
+  limitTokens: number;
+  usageRatio: number;
+  messageCount: number;
+  estimated: boolean;
+  modelName?: string;
+  chatModelConfigId?: number;
+}
+
 export interface AnswerTraceSemanticHit {
   tableName?: string;
   columnName?: string;
@@ -181,6 +191,23 @@ class ChatService {
     const response = await axios.get<ChatMessage[]>(
       `${API_BASE_URL}/sessions/${sessionId}/messages`,
       { params: { agentId: resolvedAgentId } },
+    );
+    return response.data;
+  }
+
+  async getSessionContext(
+    sessionId: string,
+    agentId: number,
+    chatModelConfigId?: number,
+  ): Promise<SessionContextUsage> {
+    const resolvedAgentId = resolveAgentId(agentId);
+    const params: Record<string, number> = { agentId: resolvedAgentId };
+    if (typeof chatModelConfigId === 'number') {
+      params.chatModelConfigId = chatModelConfigId;
+    }
+    const response = await axios.get<SessionContextUsage>(
+      `${API_BASE_URL}/sessions/${sessionId}/context`,
+      { params },
     );
     return response.data;
   }

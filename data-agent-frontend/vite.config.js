@@ -17,6 +17,25 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { resolve } from 'path';
 
+const LOCAL_DATA_AGENT_TOKEN = process.env.VITE_DATA_AGENT_TOKEN?.trim();
+const LOCAL_DATA_AGENT_AUTH_VALUE = LOCAL_DATA_AGENT_TOKEN
+  ? LOCAL_DATA_AGENT_TOKEN.toLowerCase().startsWith('bearer ')
+    ? LOCAL_DATA_AGENT_TOKEN
+    : `Bearer ${LOCAL_DATA_AGENT_TOKEN}`
+  : null;
+
+const withLocalAuthProxy = target => ({
+  target,
+  changeOrigin: true,
+  ...(LOCAL_DATA_AGENT_AUTH_VALUE
+    ? {
+        headers: {
+          'V4-Authorization': LOCAL_DATA_AGENT_AUTH_VALUE,
+        },
+      }
+    : {}),
+});
+
 export default defineConfig({
   plugins: [vue()],
   resolve: {
@@ -27,18 +46,9 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/api': {
-        target: 'http://localhost:8065',
-        changeOrigin: true,
-      },
-      '/nl2sql': {
-        target: 'http://localhost:8065',
-        changeOrigin: true,
-      },
-      '/uploads': {
-        target: 'http://localhost:8065',
-        changeOrigin: true,
-      },
+      '/api': withLocalAuthProxy('http://localhost:8065'),
+      '/nl2sql': withLocalAuthProxy('http://localhost:8065'),
+      '/uploads': withLocalAuthProxy('http://localhost:8065'),
     },
     historyApiFallback: true,
   },

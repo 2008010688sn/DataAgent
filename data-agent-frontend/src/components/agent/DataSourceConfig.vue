@@ -668,10 +668,10 @@
     :close-on-click-modal="false"
   >
     <div v-if="currentForeignKeyDatasource">
-      <div style="margin-bottom: 20px; padding: 10px; background: #f0f9ff; border-radius: 4px">
+      <div style="margin-bottom: 20px; padding: 10px; background: #f4faf2; border-radius: 4px">
         <p style="margin: 0; font-size: 14px; color: #666">
           当前配置数据源：
-          <span style="font-weight: 600; color: #1890ff">
+          <span style="font-weight: 600; color: #167243">
             {{ currentForeignKeyDatasource.name }}
           </span>
         </p>
@@ -685,7 +685,7 @@
             font-weight: 600;
             color: #333;
             margin-bottom: 15px;
-            border-left: 4px solid #1890ff;
+            border-left: 4px solid #167243;
             padding-left: 10px;
           "
         >
@@ -694,7 +694,7 @@
         <el-table :data="foreignKeyList" border style="width: 100%" size="small">
           <el-table-column prop="sourceTableName" label="主表 (Source)" min-width="100px">
             <template #default="scope">
-              <span style="font-family: monospace; color: #1890ff">
+              <span style="font-family: monospace; color: #167243">
                 {{ scope.row.sourceTableName }}
               </span>
             </template>
@@ -761,10 +761,10 @@
 
       <!-- 新增/编辑关联关系表单 -->
       <div
-        style="background: #f0f9ff; padding: 20px; border-radius: 8px; border: 1px solid #bae7ff"
+        style="background: #f4faf2; padding: 20px; border-radius: 8px; border: 1px solid #cfe3ca"
       >
         <h4 style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 15px">
-          <el-icon style="margin-right: 6px; vertical-align: middle; color: #1890ff">
+          <el-icon style="margin-right: 6px; vertical-align: middle; color: #167243">
             <CirclePlus v-if="!editingForeignKey" />
             <Edit v-else />
           </el-icon>
@@ -1037,7 +1037,7 @@
           const agentDatasource: AgentDatasource[] = response || [];
           datasource.value = agentDatasource.map(item => {
             const datasourceItem = { ...item.datasource };
-            datasourceItem.status = item.isActive === 1 ? 'active' : 'inactive';
+            datasourceItem.status = item.isActive === true ? 'active' : 'inactive';
 
             if (item.datasource?.id) {
               if (item.selectTables) {
@@ -1104,7 +1104,7 @@
 
         const datasourceSnapshot: Datasource = {
           ...nextSnapshot.datasource,
-          status: nextSnapshot.isActive === 1 ? 'active' : 'inactive',
+          status: nextSnapshot.isActive === true ? 'active' : 'inactive',
         };
         const datasourceIndex = datasource.value.findIndex(item => item.id === datasourceId);
         if (datasourceIndex >= 0) {

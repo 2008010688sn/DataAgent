@@ -24,21 +24,21 @@ export interface Agent {
   avatar?: string;
   status?: string;
   apiKey?: string | null;
-  apiKeyEnabled?: number | boolean;
+  apiKeyEnabled?: boolean;
   prompt?: string;
   category?: string;
   adminId?: number;
   tags?: string;
   createTime?: Date;
   updateTime?: Date;
-  humanReviewEnabled?: number | boolean; // 0 or 1, default is 0
+  humanReviewEnabled?: boolean;
 }
 
 const API_BASE_URL = '/api/agent';
 
 export interface AgentApiKeyResponse {
   apiKey: string | null;
-  apiKeyEnabled: number | boolean;
+  apiKeyEnabled: boolean;
 }
 
 export type AgentApiKeyApiResult = ApiResponse<AgentApiKeyResponse>;
@@ -106,7 +106,7 @@ class AgentService {
         prompt: agent.prompt,
         category: agent.category,
         tags: agent.tags,
-        humanReviewEnabled: agent.humanReviewEnabled ? 1 : 0,
+        humanReviewEnabled: Boolean(agent.humanReviewEnabled),
       };
       const response = await axios.put<Agent>(`${API_BASE_URL}/${id}`, agentData);
       return response.data;

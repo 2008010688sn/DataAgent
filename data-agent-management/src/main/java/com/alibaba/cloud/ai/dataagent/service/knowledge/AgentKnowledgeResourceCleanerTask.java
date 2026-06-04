@@ -79,7 +79,7 @@ public class AgentKnowledgeResourceCleanerTask {
 
 		// C. 如果都清理干净了，更新数据库状态
 		if (vectorDeleted && fileDeleted) {
-			knowledge.setIsResourceCleaned(1);
+			knowledge.setIsResourceCleaned(true);
 			knowledge.setUpdatedTime(LocalDateTime.now());
 			mapper.update(knowledge);
 			log.info("Zombie resource cleaned: ID={}", id);

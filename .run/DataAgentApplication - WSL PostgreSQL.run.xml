@@ -1,0 +1,19 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="DataAgentApplication - WSL PostgreSQL" type="Application" factoryName="Application" singleton="true">
+    <option name="MAIN_CLASS_NAME" value="com.alibaba.cloud.ai.dataagent.DataAgentApplication" />
+    <module name="spring-ai-alibaba-data-agent-management" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/data-agent-management" />
+    <envs>
+      <env name="DATA_AGENT_DATASOURCE_URL" value="jdbc:postgresql://127.0.0.1:5433/saa_data_agent" />
+      <env name="DATA_AGENT_DATASOURCE_USERNAME" value="postgres" />
+      <env name="DATA_AGENT_DATASOURCE_PASSWORD" value="postgres" />
+      <env name="DATA_AGENT_DATASOURCE_SQL_INIT" value="never" />
+      <env name="LANGFUSE_ENABLED" value="false" />
+      <env name="SERVER_ADDRESS" value="127.0.0.1" />
+    </envs>
+    <shortenClasspath name="ARGS_FILE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

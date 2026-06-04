@@ -179,7 +179,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 
 		doDelVector(knowledge);
 
-		if (businessKnowledgeMapper.logicalDelete(id, 1) <= 0) {
+		if (businessKnowledgeMapper.logicalDelete(id, true) <= 0) {
 			// 重新添加修复被删除的记录
 			agentVectorStoreService.addDocuments(knowledge.getAgentId().toString(),
 					List.of(DocumentConverterUtil.convertBusinessKnowledgeToDocument(knowledge)));
@@ -205,7 +205,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 		}
 
 		// 更新数据库即可，不需要更新向量库，混合检索的的时候DynamicFilterService会根据 isRecall 字段过滤了
-		knowledge.setIsRecall(isRecall ? 1 : 0);
+		knowledge.setIsRecall(Boolean.TRUE.equals(isRecall));
 		businessKnowledgeMapper.updateById(knowledge);
 
 	}
@@ -217,8 +217,8 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 		// 获取所有 isRecall 等于 1 且未逻辑删除的 BusinessKnowledge
 		List<BusinessKnowledge> allKnowledge = businessKnowledgeMapper.selectAll();
 		List<BusinessKnowledge> recalledKnowledge = allKnowledge.stream()
-			.filter(knowledge -> knowledge.getIsRecall() != null && knowledge.getIsRecall() == 1)
-			.filter(knowledge -> knowledge.getIsDeleted() == null || knowledge.getIsDeleted() == 0)
+			.filter(knowledge -> Boolean.TRUE.equals(knowledge.getIsRecall()))
+			.filter(knowledge -> knowledge.getIsDeleted() == null || !knowledge.getIsDeleted())
 			.filter(knowledge -> agentId.equals(knowledge.getAgentId().toString()))
 			.toList();
 
@@ -243,7 +243,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 		}
 
 		// 非召回的不处理
-		if (knowledge.getIsRecall() == null || knowledge.getIsRecall() == 0) {
+		if (!Boolean.TRUE.equals(knowledge.getIsRecall())) {
 			throw new RuntimeException("BusinessKnowledge is not recalled, please recall it first.");
 		}
 

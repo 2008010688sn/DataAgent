@@ -114,7 +114,7 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 			.businessDescription(dto.getBusinessDescription())
 			.columnComment(dto.getColumnComment())
 			.dataType(dto.getDataType())
-			.status(1)
+			.status(true)
 			.build();
 
 		insertSemanticModel(semanticModel, DUPLICATE_SEMANTIC_MODEL_MESSAGE);
@@ -209,7 +209,7 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 					.businessDescription(item.getBusinessDescription())
 					.columnComment(item.getColumnComment())
 					.dataType(item.getDataType())
-					.status(1)
+					.status(true)
 					.createdTime(item.getCreateTime() != null ? item.getCreateTime() : LocalDateTime.now())
 					.build();
 				insertSemanticModel(newModel, buildDuplicateImportMessage(i + 1, item));

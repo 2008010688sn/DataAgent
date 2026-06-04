@@ -40,7 +40,7 @@ export interface AgentDatasource {
   id?: number;
   agentId?: number;
   datasourceId?: number;
-  isActive?: number | boolean;
+  isActive?: boolean;
   createTime?: string;
   updateTime?: string;
   datasource?: Datasource;

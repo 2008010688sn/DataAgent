@@ -48,7 +48,7 @@ public class AgentKnowledge {
 	private String content;
 
 	// 业务状态: 1=召回, 0=非召回
-	private Integer isRecall;
+	private Boolean isRecall;
 
 	// 向量化状态：PENDING待处理，PROCESSING处理中，COMPLETED已完成，FAILED失败
 	private EmbeddingStatus embeddingStatus;
@@ -78,10 +78,10 @@ public class AgentKnowledge {
 	private LocalDateTime updatedTime;
 
 	// 0=未删除, 1=已删除
-	private Integer isDeleted;
+	private Boolean isDeleted;
 
 	// 0=物理资源（文件和向量）未清理, 1=物理资源已清理
 	// 默认值是 0
-	private Integer isResourceCleaned;
+	private Boolean isResourceCleaned;
 
 }

@@ -20,10 +20,10 @@ import com.alibaba.cloud.ai.dataagent.vo.SessionUpdateEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 
 @Slf4j
 @RestController
@@ -35,16 +35,18 @@ public class SessionEventController {
 	private final SessionEventPublisher sessionEventPublisher;
 
 	@GetMapping(value = "/agent/{agentId}/sessions/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-	public Flux<ServerSentEvent<SessionUpdateEvent>> streamSessionUpdates(@PathVariable Integer agentId,
-			ServerHttpResponse response) {
-		response.getHeaders().add("Cache-Control", "no-cache");
-		response.getHeaders().add("Connection", "keep-alive");
-		response.getHeaders().add("Access-Control-Allow-Origin", "*");
-
+	public ResponseEntity<Flux<ServerSentEvent<SessionUpdateEvent>>> streamSessionUpdates(
+			@PathVariable Integer agentId) {
 		log.debug("Client subscribed to session update stream for agent {}", agentId);
-		return sessionEventPublisher.register(agentId)
+		Flux<ServerSentEvent<SessionUpdateEvent>> stream = sessionEventPublisher.register(agentId)
 			.doFinally(
 					signal -> log.debug("Session update stream finished for agent {} with signal {}", agentId, signal));
+		return ResponseEntity.ok()
+			.contentType(MediaType.TEXT_EVENT_STREAM)
+			.header("Cache-Control", "no-cache")
+			.header("Connection", "keep-alive")
+			.header("Access-Control-Allow-Origin", "*")
+			.body(stream);
 	}
 
 }

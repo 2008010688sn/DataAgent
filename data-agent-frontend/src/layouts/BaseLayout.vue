@@ -20,8 +20,11 @@
       <div class="header-content">
         <div class="brand-section">
           <div class="brand-logo">
-            <i class="bi bi-robot"></i>
-            <span class="brand-text">Spring AI Alibaba Data Agent</span>
+            <img src="@/assets/company-logo.jpg" alt="XX Data Agent" class="brand-logo-img" />
+            <div class="brand-copy">
+              <span class="brand-text">XX Data Agent</span>
+              <span class="brand-subtitle">绿色循环包装数据智能体</span>
+            </div>
           </div>
           <nav class="header-nav">
             <div class="nav-item" :class="{ active: isAgentPage() }" @click="goToAgentList">
@@ -87,13 +90,16 @@
 <style scoped>
   .base-layout {
     min-height: 100vh;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    background:
+      radial-gradient(circle at 0 0, rgba(18, 124, 75, 0.08), transparent 34%),
+      linear-gradient(135deg, #f7faf4 0%, #eef5ea 100%);
   }
 
   .page-header {
-    background: white;
-    border-bottom: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    border-bottom: 1px solid #d7e7d6;
+    box-shadow: 0 8px 24px rgba(34, 94, 58, 0.08);
+    backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -118,14 +124,32 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1e293b;
   }
 
-  .brand-logo i {
-    font-size: 1.5rem;
-    color: #3b82f6;
+  .brand-logo-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0, 178, 57, 0.18);
+  }
+
+  .brand-copy {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+
+  .brand-text {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #173f2a;
+  }
+
+  .brand-subtitle {
+    margin-top: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #5f7d66;
   }
 
   .header-nav {
@@ -142,18 +166,18 @@
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-    color: #64748b;
+    color: #52685a;
     font-weight: 500;
   }
 
   .nav-item:hover {
-    background: #f1f5f9;
-    color: #334155;
+    background: #eef7ee;
+    color: #1f6b42;
   }
 
   .nav-item.active {
-    background: #e0f2fe;
-    color: #0369a1;
+    background: #dff1df;
+    color: #0f5b36;
   }
 
   .nav-item i {

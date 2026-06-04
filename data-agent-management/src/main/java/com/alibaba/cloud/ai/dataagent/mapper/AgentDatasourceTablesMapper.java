@@ -42,10 +42,10 @@ public interface AgentDatasourceTablesMapper {
 	int removeAllTables(@Param("agentDatasourceId") int agentDatasourceId);
 
 	// 插入用户选择的列表
-	@Insert("<script>" + "INSERT IGNORE INTO agent_datasource_tables (agent_datasource_id, table_name) VALUES "
+	@Insert("<script>" + "INSERT INTO agent_datasource_tables (agent_datasource_id, table_name) VALUES "
 			+ "<if test='tables != null and tables.size() > 0'>"
 			+ "<foreach collection='tables' item='table' separator=','>" + "(#{agentDatasourceId}, #{table})"
-			+ "</foreach>" + "</if>" + "</script>")
+			+ "</foreach>" + "</if>" + " ON CONFLICT (agent_datasource_id, table_name) DO NOTHING" + "</script>")
 	int insertNewTables(@Param("agentDatasourceId") int agentDatasourceId, @Param("tables") List<String> tables);
 
 	// 更新用户的选择（tables不能为空）

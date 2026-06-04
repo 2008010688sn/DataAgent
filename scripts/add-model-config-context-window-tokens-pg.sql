@@ -1,0 +1,2 @@
+ALTER TABLE model_config
+  ADD COLUMN IF NOT EXISTS context_window_tokens INTEGER DEFAULT 32768;

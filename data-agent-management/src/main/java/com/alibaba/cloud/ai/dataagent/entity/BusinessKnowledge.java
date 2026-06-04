@@ -42,7 +42,7 @@ public class BusinessKnowledge {
 	private String synonyms; // Synonyms, comma-separated
 
 	@Builder.Default
-	private Integer isRecall = 1; // Whether to recall (0: not recall, 1: recall)
+	private Boolean isRecall = true; // Whether to recall
 
 	private Long agentId; // Associated agent ID
 
@@ -60,6 +60,6 @@ public class BusinessKnowledge {
 
 	// 0=未删除, 1=已删除
 	@Builder.Default
-	private Integer isDeleted = 0;
+	private Boolean isDeleted = false;
 
 }

@@ -109,6 +109,11 @@
                   {{ scope.row.maxTokens || 2000 }}
                 </template>
               </el-table-column>
+              <el-table-column prop="contextWindowTokens" label="Context" width="120">
+                <template #default="scope">
+                  {{ scope.row.contextWindowTokens || 32768 }}
+                </template>
+              </el-table-column>
               <el-table-column prop="isActive" label="状态" width="100">
                 <template #default="scope">
                   <el-tag
@@ -272,6 +277,17 @@
             />
             <div class="form-tip">控制生成文本的最大长度</div>
           </el-form-item>
+
+          <el-form-item label="Context window" prop="contextWindowTokens">
+            <el-input-number
+              v-model="formData.contextWindowTokens"
+              :min="1024"
+              :max="1000000"
+              :step="1024"
+              style="width: 100%"
+            />
+            <div class="form-tip">Total context tokens used by the chat usage indicator.</div>
+          </el-form-item>
         </el-form>
 
         <el-divider content-position="left">网络代理配置</el-divider>
@@ -366,6 +382,7 @@
         modelType: 'CHAT',
         temperature: 0.0,
         maxTokens: 2000,
+        contextWindowTokens: 32768,
         completionsPath: '',
         embeddingsPath: '',
         isActive: false,
@@ -421,6 +438,15 @@
             min: 100,
             max: 10000,
             message: '最大Token必须在100-10000之间',
+            trigger: 'blur',
+          },
+        ],
+        contextWindowTokens: [
+          {
+            type: 'number',
+            min: 1024,
+            max: 1000000,
+            message: 'Context window must be between 1024 and 1000000',
             trigger: 'blur',
           },
         ],
@@ -490,6 +516,7 @@
           modelType: 'CHAT',
           temperature: 0.0,
           maxTokens: 2000,
+          contextWindowTokens: 32768,
           completionsPath: '',
           embeddingsPath: '',
           isActive: false,
@@ -499,7 +526,10 @@
 
       const handleEdit = (config: ModelConfig) => {
         isEditMode.value = true;
-        formData.value = { ...config };
+        formData.value = {
+          ...config,
+          contextWindowTokens: config.contextWindowTokens || 32768,
+        };
         dialogVisible.value = true;
       };
 

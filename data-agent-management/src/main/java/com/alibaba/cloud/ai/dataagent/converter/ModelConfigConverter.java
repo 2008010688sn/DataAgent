@@ -38,6 +38,7 @@ public class ModelConfigConverter {
 			.modelName(entity.getModelName())
 			.temperature(entity.getTemperature())
 			.maxTokens(entity.getMaxTokens())
+			.contextWindowTokens(entity.getContextWindowTokens())
 			.isActive(entity.getIsActive())
 			.apiKey(entity.getApiKey())
 			.modelType(entity.getModelType().getCode())
@@ -66,6 +67,7 @@ public class ModelConfigConverter {
 		entity.setModelName(dto.getModelName());
 		entity.setTemperature(dto.getTemperature());
 		entity.setMaxTokens(dto.getMaxTokens());
+		entity.setContextWindowTokens(dto.getContextWindowTokens());
 		entity.setModelType(ModelType.fromCode(dto.getModelType()));
 		entity.setCompletionsPath(dto.getCompletionsPath());
 		entity.setEmbeddingsPath(dto.getEmbeddingsPath());
@@ -76,7 +78,7 @@ public class ModelConfigConverter {
 		entity.setProxyPassword(dto.getProxyPassword());
 		// 默认值处理
 		entity.setIsActive(false);
-		entity.setIsDeleted(0);
+		entity.setIsDeleted(false);
 		entity.setCreatedTime(LocalDateTime.now());
 		entity.setUpdatedTime(LocalDateTime.now());
 

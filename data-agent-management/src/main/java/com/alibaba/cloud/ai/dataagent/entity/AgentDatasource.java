@@ -35,7 +35,7 @@ public class AgentDatasource {
 
 	private Integer datasourceId;
 
-	private Integer isActive;
+	private Boolean isActive;
 
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -57,7 +57,7 @@ public class AgentDatasource {
 	public AgentDatasource(Long agentId, Integer datasourceId) {
 		this.agentId = agentId;
 		this.datasourceId = datasourceId;
-		this.isActive = 1;
+		this.isActive = true;
 	}
 
 }

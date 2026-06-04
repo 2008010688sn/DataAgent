@@ -18,9 +18,14 @@ package com.alibaba.cloud.ai.dataagent.util;
 public class ColumnTypeUtil {
 
 	public static String wrapType(String s) {
+		if (s == null) {
+			return "";
+		}
+		if (s.equalsIgnoreCase("bool") || s.equalsIgnoreCase("boolean")) {
+			return "boolean";
+		}
 		if (s.equalsIgnoreCase("decimal") || s.equalsIgnoreCase("int") || s.equalsIgnoreCase("bigint")
-				|| s.equalsIgnoreCase("bool") || s.equalsIgnoreCase("bit") || s.equalsIgnoreCase("boolean")
-				|| s.equalsIgnoreCase("double")) {
+				|| s.equalsIgnoreCase("bit") || s.equalsIgnoreCase("double")) {
 			return "number";
 		}
 		else if (s.startsWith("varchar") || s.startsWith("char")) {

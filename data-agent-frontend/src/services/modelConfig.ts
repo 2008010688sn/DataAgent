@@ -26,6 +26,7 @@ export interface ModelConfig {
   modelType: string; // "CHAT" or "EMBEDDING"
   temperature?: number;
   maxTokens?: number;
+  contextWindowTokens?: number;
   isActive?: boolean;
   completionsPath?: string; // 对话模型路径
   embeddingsPath?: string; // 嵌入模型路径

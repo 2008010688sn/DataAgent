@@ -350,7 +350,7 @@
                 支持 PDF, DOCX, TXT, MD
                 等格式(注意：PDT,TXT等纯文本文件如果不是UTF-8编码可能导致读取失败)
               </div>
-              <div v-if="fileList.length > 0" class="el-upload__tip" style="color: #409eff">
+              <div v-if="fileList.length > 0" class="el-upload__tip" style="color: #167243">
                 文件大小: {{ formatFileSize(fileList[0].size) }}
               </div>
             </template>
@@ -685,7 +685,7 @@
             formData.append('agentId', String(knowledgeForm.value.agentId));
             formData.append('title', knowledgeForm.value.title);
             formData.append('type', knowledgeForm.value.type || 'DOCUMENT');
-            formData.append('isRecall', knowledgeForm.value.isRecall ? '1' : '0');
+            formData.append('isRecall', String(knowledgeForm.value.isRecall === true));
 
             if (knowledgeForm.value.type === 'DOCUMENT' && knowledgeForm.value.file) {
               formData.append('file', knowledgeForm.value.file);

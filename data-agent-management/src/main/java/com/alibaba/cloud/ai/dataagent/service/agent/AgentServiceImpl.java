@@ -77,7 +77,7 @@ public class AgentServiceImpl implements AgentService {
 			agent.setCreateTime(now);
 			agent.setUpdateTime(now);
 			if (agent.getApiKeyEnabled() == null) {
-				agent.setApiKeyEnabled(0);
+				agent.setApiKeyEnabled(false);
 			}
 
 			agentMapper.insert(agent);
@@ -86,7 +86,7 @@ public class AgentServiceImpl implements AgentService {
 			// Update
 			agent.setUpdateTime(now);
 			if (agent.getApiKeyEnabled() == null) {
-				agent.setApiKeyEnabled(0);
+				agent.setApiKeyEnabled(false);
 			}
 			agentMapper.updateById(agent);
 		}
@@ -140,9 +140,9 @@ public class AgentServiceImpl implements AgentService {
 	public Agent generateApiKey(Long id) {
 		Agent agent = requireAgent(id);
 		String apiKey = ApiKeyUtil.generate();
-		agentMapper.updateApiKey(id, apiKey, 1);
+		agentMapper.updateApiKey(id, apiKey, true);
 		agent.setApiKey(apiKey);
-		agent.setApiKeyEnabled(1);
+		agent.setApiKeyEnabled(true);
 		return agent;
 	}
 
@@ -154,17 +154,17 @@ public class AgentServiceImpl implements AgentService {
 	@Override
 	public Agent deleteApiKey(Long id) {
 		Agent agent = requireAgent(id);
-		agentMapper.updateApiKey(id, null, 0);
+		agentMapper.updateApiKey(id, null, false);
 		agent.setApiKey(null);
-		agent.setApiKeyEnabled(0);
+		agent.setApiKeyEnabled(false);
 		return agent;
 	}
 
 	@Override
 	public Agent toggleApiKey(Long id, boolean enabled) {
-		agentMapper.toggleApiKey(id, enabled ? 1 : 0);
+		agentMapper.toggleApiKey(id, enabled);
 		Agent agent = requireAgent(id);
-		agent.setApiKeyEnabled(enabled ? 1 : 0);
+		agent.setApiKeyEnabled(enabled);
 		return agent;
 	}
 

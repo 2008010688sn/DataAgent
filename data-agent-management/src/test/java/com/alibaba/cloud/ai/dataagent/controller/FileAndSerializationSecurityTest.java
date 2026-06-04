@@ -47,7 +47,7 @@ class FileAndSerializationSecurityTest {
 
 	@Test
 	void agentSerializationShouldHideApiKey() throws Exception {
-		Agent agent = Agent.builder().id(1L).name("demo").apiKey("sk-test-secret").apiKeyEnabled(1).build();
+		Agent agent = Agent.builder().id(1L).name("demo").apiKey("sk-test-secret").apiKeyEnabled(true).build();
 
 		String json = objectMapper.writeValueAsString(agent);
 
@@ -72,6 +72,23 @@ class FileAndSerializationSecurityTest {
 		assertFalse(json.contains("\"password\":"));
 		assertFalse(json.contains("\"connectionUrl\":"));
 		assertFalse(json.contains("jdbc:mysql://127.0.0.1:3306/test"));
+	}
+
+	@Test
+	void datasourceDeserializationShouldAcceptCredentials() throws Exception {
+		String json = """
+				{
+				  "name": "postgres",
+				  "username": "admin",
+				  "password": "secret",
+				  "connectionUrl": "jdbc:postgresql://127.0.0.1:5432/test"
+				}
+				""";
+
+		Datasource datasource = objectMapper.readValue(json, Datasource.class);
+
+		assertEquals("secret", datasource.getPassword());
+		assertEquals("jdbc:postgresql://127.0.0.1:5432/test", datasource.getConnectionUrl());
 	}
 
 	@Test

@@ -82,7 +82,7 @@ public interface SemanticModelMapper {
 	 */
 	@Update("""
 			UPDATE semantic_model
-			SET status = 1
+			SET status = true
 			WHERE id = #{id}
 			""")
 	int enableById(@Param("id") Long id);
@@ -92,7 +92,7 @@ public interface SemanticModelMapper {
 	 */
 	@Update("""
 			UPDATE semantic_model
-			SET status = 0
+			SET status = false
 			WHERE id = #{id}
 			""")
 	int disableById(@Param("id") Long id);
@@ -103,7 +103,7 @@ public interface SemanticModelMapper {
 	@Select("""
 			SELECT * FROM semantic_model
 			WHERE agent_id = #{agentId}
-			  AND status != 0
+			  AND status = true
 			ORDER BY created_time DESC
 			""")
 	List<SemanticModel> selectEnabledByAgentId(@Param("agentId") Long agentId);
@@ -112,7 +112,7 @@ public interface SemanticModelMapper {
 			SELECT * FROM semantic_model
 			WHERE agent_id = #{agentId}
 			  AND datasource_id = #{datasourceId}
-			  AND status != 0
+			  AND status = true
 			ORDER BY created_time DESC
 			""")
 	List<SemanticModel> selectEnabledByAgentIdAndDatasourceId(@Param("agentId") Long agentId,
@@ -156,7 +156,7 @@ public interface SemanticModelMapper {
 			<script>
 			SELECT * FROM semantic_model
 			WHERE agent_id = #{agentId}
-			  AND status = 1
+			  AND status = true
 			  AND LOWER(table_name) IN
 			  <foreach item='tableName' index='index' collection='tableNames' open='(' separator=',' close=')'>
 			    #{tableName}
@@ -172,7 +172,7 @@ public interface SemanticModelMapper {
 			SELECT * FROM semantic_model
 			WHERE agent_id = #{agentId}
 			  AND datasource_id = #{datasourceId}
-			  AND status = 1
+			  AND status = true
 			  AND LOWER(table_name) IN
 			  <foreach item='tableName' index='index' collection='tableNames' open='(' separator=',' close=')'>
 			    #{tableName}

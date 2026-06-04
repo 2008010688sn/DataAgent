@@ -65,6 +65,18 @@ public class ModelConfigDataServiceImpl implements ModelConfigDataService {
 	}
 
 	@Override
+	public ModelConfigDTO getConfigById(Integer id, ModelType modelType) {
+		ModelConfig entity = modelConfigMapper.findById(id);
+		if (entity == null) {
+			throw new RuntimeException("模型配置不存在");
+		}
+		if (entity.getModelType() == null || !entity.getModelType().equals(modelType)) {
+			throw new RuntimeException("模型配置类型不匹配");
+		}
+		return toDTO(entity);
+	}
+
+	@Override
 	public void addConfig(ModelConfigDTO dto) {
 		clean(dto);
 		// 只存库，不切换
@@ -116,6 +128,7 @@ public class ModelConfigDataServiceImpl implements ModelConfigDataService {
 		oldEntity.setModelName(dto.getModelName());
 		oldEntity.setTemperature(dto.getTemperature());
 		oldEntity.setMaxTokens(dto.getMaxTokens()); // 新增字段
+		oldEntity.setContextWindowTokens(dto.getContextWindowTokens());
 		oldEntity.setCompletionsPath(dto.getCompletionsPath()); // 路径字段
 		oldEntity.setEmbeddingsPath(dto.getEmbeddingsPath()); // 路径字段
 		oldEntity.setUpdatedTime(LocalDateTime.now()); // 更新时间
@@ -145,7 +158,7 @@ public class ModelConfigDataServiceImpl implements ModelConfigDataService {
 		}
 
 		// 3. 执行删除逻辑
-		entity.setIsDeleted(1);
+		entity.setIsDeleted(true);
 		entity.setUpdatedTime(LocalDateTime.now());
 		int updated = modelConfigMapper.updateById(entity);
 		if (updated == 0) {

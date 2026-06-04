@@ -100,14 +100,14 @@ public interface AgentMapper {
 			WHERE id = #{id}
 			""")
 	int updateApiKey(@Param("id") Long id, @Param("apiKey") String apiKey,
-			@Param("apiKeyEnabled") Integer apiKeyEnabled);
+			@Param("apiKeyEnabled") Boolean apiKeyEnabled);
 
 	@Update("""
 			UPDATE agent
 			SET api_key_enabled = #{enabled}, update_time = NOW()
 			WHERE id = #{id}
 			""")
-	int toggleApiKey(@Param("id") Long id, @Param("enabled") Integer enabled);
+	int toggleApiKey(@Param("id") Long id, @Param("enabled") Boolean enabled);
 
 	@Delete("""
 			DELETE FROM agent WHERE id = #{id}

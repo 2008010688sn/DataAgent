@@ -28,7 +28,7 @@ interface SemanticModel {
   businessDescription: string;
   columnComment: string;
   dataType: string;
-  status: number;
+  status: boolean;
   createdTime?: string;
   updateTime?: string;
 }
